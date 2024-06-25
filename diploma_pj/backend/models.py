@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+# Choices for the status of an order
 STATUS_CHOICES = (
     ("new", "New"),
     ("confirmed", "Confirmed"),
@@ -11,6 +12,7 @@ STATUS_CHOICES = (
     ("returned", "Returned"),
 )
 
+# Choices for the type of contact
 CONTACT_TYPES = (
     ("shop", "Shop"),
     ("buyer", "Buyer"),
@@ -18,6 +20,10 @@ CONTACT_TYPES = (
 
 
 class Shop(models.Model):
+    """
+    Model representing a shop.
+    """
+
     name = models.CharField(max_length=100, verbose_name="Shop name")
     url = models.URLField(null=True, blank=True, verbose_name="Shop URL")
 
@@ -28,6 +34,10 @@ class Shop(models.Model):
 
 
 class Category(models.Model):
+    """
+    Model representing a category.
+    """
+
     shops = models.ManyToManyField(Shop, verbose_name="Shops", related_name="categories")
     name = models.CharField(max_length=100, verbose_name="Category name")
 
@@ -38,6 +48,10 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    """
+    Model representing a product.
+    """
+
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=100, verbose_name="Product name")
 
@@ -48,6 +62,10 @@ class Product(models.Model):
 
 
 class ProductInfo(models.Model):
+    """
+    Model representing product information.
+    """
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Product")
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, verbose_name="Shop")
     name = models.CharField(max_length=100, verbose_name="Product name")
@@ -64,6 +82,10 @@ class ProductInfo(models.Model):
 
 
 class Parameter(models.Model):
+    """
+    Model representing a parameter.
+    """
+
     name = models.CharField(max_length=100, verbose_name="Parameter name")
 
     class Meta:
@@ -73,6 +95,10 @@ class Parameter(models.Model):
 
 
 class ProductParameter(models.Model):
+    """
+    Model representing a product parameter.
+    """
+
     product_info = models.ForeignKey(
         ProductInfo,
         on_delete=models.CASCADE,
@@ -93,12 +119,16 @@ class ProductParameter(models.Model):
 
 
 class Order(models.Model):
+    """
+    Model representing an order.
+    """
+
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="orders"
     )
     date = models.DateField(verbose_name="Date", auto_now_add=True)
     status = models.CharField(
-        choises=STATUS_CHOICES, default="new", verbose_name="Status", max_length=20
+        choices=STATUS_CHOICES, default="new", verbose_name="Status", max_length=20
     )
 
     class Meta:
@@ -108,6 +138,10 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    """
+    Model representing an ordered item.
+    """
+
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
@@ -131,6 +165,10 @@ class OrderItem(models.Model):
 
 
 class Contact(models.Model):
+    """
+    Model representing a contact.
+    """
+
     type = models.CharField(choices=CONTACT_TYPES, verbose_name="Type", max_length=20)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
@@ -140,5 +178,4 @@ class Contact(models.Model):
 
     class Meta:
         verbose_name = "Contact"
-        verbose_name_plural = "List of contacts"
-        ordering = ("-name",)
+        verbose_name_plural = "List"
