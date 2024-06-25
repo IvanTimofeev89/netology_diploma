@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 
 STATUS_CHOICES = (
     ("new", "New"),
@@ -28,9 +28,7 @@ class Shop(models.Model):
 
 
 class Category(models.Model):
-    shops = models.ManyToManyField(
-        Shop, verbose_name="Shops", related_name="categories"
-    )
+    shops = models.ManyToManyField(Shop, verbose_name="Shops", related_name="categories")
     name = models.CharField(max_length=100, verbose_name="Category name")
 
     class Meta:
@@ -40,9 +38,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="products"
-    )
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=100, verbose_name="Product name")
 
     class Meta:
@@ -52,9 +48,7 @@ class Product(models.Model):
 
 
 class ProductInfo(models.Model):
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, verbose_name="Product"
-    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Product")
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, verbose_name="Shop")
     name = models.CharField(max_length=100, verbose_name="Product name")
     quantity = models.PositiveIntegerField(verbose_name="Quantity")
