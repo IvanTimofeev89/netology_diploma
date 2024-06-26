@@ -5,5 +5,5 @@ from .views import RegisterUser
 app_name = "backend"
 
 urlpatterns = [
-    path("register/user", RegisterUser.as_view(), name="register_user"),
+    path("user/register", RegisterUser.as_view(), name="user_register"),
 ]

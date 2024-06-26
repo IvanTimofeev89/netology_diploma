@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
     Custom manager for the User model, providing methods to create regular users and superusers.
     """
 
-    def create_user(self, email, first_name, last_name, middle_name, password=None, **extra_fields):
+    def create_user(self, email, first_name, last_name, password=None, **extra_fields):
         """
         Create and save a regular user with the given email,
         first name, last name, family name, and password.
@@ -39,7 +39,6 @@ class UserManager(BaseUserManager):
         :param email: The email address of the user.
         :param first_name: The first name of the user.
         :param last_name: The last name of the user.
-        :param middle_name: The middle name of the user.
         :param password: The password for the user.
         :param extra_fields: Additional fields to be saved for the user.
         :return: The created user.
@@ -51,16 +50,13 @@ class UserManager(BaseUserManager):
             email=email,
             first_name=first_name,
             last_name=last_name,
-            middle_name=middle_name,
             **extra_fields,
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(
-        self, email, first_name, last_name, middle_name, password=None, **extra_fields
-    ):
+    def create_superuser(self, email, first_name, last_name, password=None, **extra_fields):
         """
         Create and save a superuser with the given email,
         first name, last name, middle name, and password.
@@ -68,7 +64,6 @@ class UserManager(BaseUserManager):
         :param email: The email address of the superuser.
         :param first_name: The first name of the superuser.
         :param last_name: The last name of the superuser.
-        :param middle_name: The family name of the superuser.
         :param password: The password for the superuser.
         :param extra_fields: Additional fields to be saved for the superuser.
         :return: The created superuser.
@@ -76,7 +71,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(email, first_name, last_name, middle_name, password, **extra_fields)
+        return self.create_user(email, first_name, last_name, password, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
