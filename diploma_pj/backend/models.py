@@ -269,7 +269,6 @@ class Contact(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
     )
-    name = models.CharField(max_length=100, verbose_name="Name")
     phone = models.CharField(max_length=20, verbose_name="Phone", unique=True)
     city = models.CharField(max_length=100, verbose_name="City", default="n/a")
     street = models.CharField(max_length=100, verbose_name="Street", default="n/a")
