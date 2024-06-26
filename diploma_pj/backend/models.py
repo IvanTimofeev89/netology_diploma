@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
     Custom manager for the User model, providing methods to create regular users and superusers.
     """
 
-    def create_user(self, email, first_name, last_name, family_name, password=None, **extra_fields):
+    def create_user(self, email, first_name, last_name, middle_name, password=None, **extra_fields):
         """
         Create and save a regular user with the given email,
         first name, last name, family name, and password.
@@ -39,7 +39,7 @@ class UserManager(BaseUserManager):
         :param email: The email address of the user.
         :param first_name: The first name of the user.
         :param last_name: The last name of the user.
-        :param family_name: The family name of the user.
+        :param middle_name: The family name of the user.
         :param password: The password for the user.
         :param extra_fields: Additional fields to be saved for the user.
         :return: The created user.
@@ -51,7 +51,7 @@ class UserManager(BaseUserManager):
             email=email,
             first_name=first_name,
             last_name=last_name,
-            family_name=family_name,
+            middle_name=middle_name,
             **extra_fields
         )
         user.set_password(password)
@@ -59,7 +59,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(
-        self, email, first_name, last_name, family_name, password=None, **extra_fields
+        self, email, first_name, last_name, middle_name, password=None, **extra_fields
     ):
         """
         Create and save a superuser with the given email,
@@ -68,7 +68,7 @@ class UserManager(BaseUserManager):
         :param email: The email address of the superuser.
         :param first_name: The first name of the superuser.
         :param last_name: The last name of the superuser.
-        :param family_name: The family name of the superuser.
+        :param middle_name: The family name of the superuser.
         :param password: The password for the superuser.
         :param extra_fields: Additional fields to be saved for the superuser.
         :return: The created superuser.
@@ -76,7 +76,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(email, first_name, last_name, family_name, password, **extra_fields)
+        return self.create_user(email, first_name, last_name, middle_name, password, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -84,10 +84,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     Model to override standard django User model with additional fields.
     """
 
+    type = models.CharField(
+        choices=CONTACT_TYPES, verbose_name="Type", max_length=20, default="buyer"
+    )
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    family_name = models.CharField(max_length=30)
+    middle_name = models.CharField(max_length=30, blank=True)
+    company = models.CharField(max_length=100, blank=True)
+    position = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -104,7 +109,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name", "family_name"]
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     def __str__(self):
         return self.email
@@ -266,12 +271,11 @@ class Contact(models.Model):
     Model representing a contact.
     """
 
-    type = models.CharField(choices=CONTACT_TYPES, verbose_name="Type", max_length=20)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
     )
     name = models.CharField(max_length=100, verbose_name="Name")
-    phone = models.CharField(max_length=20, verbose_name="Phone")
+    phone = models.CharField(max_length=20, verbose_name="Phone", unique=True)
     city = models.CharField(max_length=100, verbose_name="City", default="n/a")
     street = models.CharField(max_length=100, verbose_name="Street", default="n/a")
     house = models.CharField(max_length=100, verbose_name="House", default="n/a")
