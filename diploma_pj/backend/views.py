@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 class RegisterUser(APIView):
     """
     Class for user registration.
-    POST method only
     """
 
     def post(self, request):

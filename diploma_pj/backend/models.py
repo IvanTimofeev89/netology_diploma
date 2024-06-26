@@ -39,7 +39,7 @@ class UserManager(BaseUserManager):
         :param email: The email address of the user.
         :param first_name: The first name of the user.
         :param last_name: The last name of the user.
-        :param middle_name: The family name of the user.
+        :param middle_name: The middle name of the user.
         :param password: The password for the user.
         :param extra_fields: Additional fields to be saved for the user.
         :return: The created user.
@@ -52,7 +52,7 @@ class UserManager(BaseUserManager):
             first_name=first_name,
             last_name=last_name,
             middle_name=middle_name,
-            **extra_fields
+            **extra_fields,
         )
         user.set_password(password)
         user.save(using=self._db)
@@ -63,7 +63,7 @@ class UserManager(BaseUserManager):
     ):
         """
         Create and save a superuser with the given email,
-        first name, last name, family name, and password.
+        first name, last name, middle name, and password.
 
         :param email: The email address of the superuser.
         :param first_name: The first name of the superuser.
@@ -109,10 +109,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = ["first_name", "email"]
 
     def __str__(self):
-        return self.email
+        return f"{self.first_name} {self.last_name}"
 
     class Meta:
         verbose_name = "User"
