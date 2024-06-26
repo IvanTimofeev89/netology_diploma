@@ -8,6 +8,8 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.utils import timezone
 
+from diploma_pj.backend.validators import phone_validator
+
 # Choices for the status of an order
 STATUS_CHOICES = (
     ("new", "New"),
@@ -269,7 +271,14 @@ class Contact(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
     )
-    phone = models.CharField(max_length=20, verbose_name="Phone", unique=True)
+    phone = models.CharField(
+        max_length=20,
+        verbose_name="Phone",
+        unique=True,
+        validators=[
+            phone_validator,
+        ],
+    )
     city = models.CharField(max_length=100, verbose_name="City", default="n/a")
     street = models.CharField(max_length=100, verbose_name="Street", default="n/a")
     house = models.CharField(max_length=100, verbose_name="House", default="n/a")
