@@ -1,5 +1,12 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    Group,
+    Permission,
+    PermissionsMixin,
+)
 from django.db import models
+from django.utils import timezone
 
 # Choices for the status of an order
 STATUS_CHOICES = (
@@ -17,6 +24,94 @@ CONTACT_TYPES = (
     ("shop", "Shop"),
     ("buyer", "Buyer"),
 )
+
+
+class UserManager(BaseUserManager):
+    """
+    Custom manager for the User model, providing methods to create regular users and superusers.
+    """
+
+    def create_user(self, email, first_name, last_name, family_name, password=None, **extra_fields):
+        """
+        Create and save a regular user with the given email,
+        first name, last name, family name, and password.
+
+        :param email: The email address of the user.
+        :param first_name: The first name of the user.
+        :param last_name: The last name of the user.
+        :param family_name: The family name of the user.
+        :param password: The password for the user.
+        :param extra_fields: Additional fields to be saved for the user.
+        :return: The created user.
+        """
+        if not email:
+            raise ValueError("The Email field must be set")
+        email = self.normalize_email(email)
+        user = self.model(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            family_name=family_name,
+            **extra_fields
+        )
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(
+        self, email, first_name, last_name, family_name, password=None, **extra_fields
+    ):
+        """
+        Create and save a superuser with the given email,
+        first name, last name, family name, and password.
+
+        :param email: The email address of the superuser.
+        :param first_name: The first name of the superuser.
+        :param last_name: The last name of the superuser.
+        :param family_name: The family name of the superuser.
+        :param password: The password for the superuser.
+        :param extra_fields: Additional fields to be saved for the superuser.
+        :return: The created superuser.
+        """
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        return self.create_user(email, first_name, last_name, family_name, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    """
+    Model to override standard django User model with additional fields.
+    """
+
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+    family_name = models.CharField(max_length=30)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=timezone.now)
+    groups = models.ManyToManyField(
+        Group, verbose_name="groups", blank=True, related_name="custom_user_groups"
+    )
+    user_permissions = models.ManyToManyField(
+        Permission,
+        verbose_name="user permissions",
+        blank=True,
+        related_name="custom_user_permissions",
+    )
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name", "family_name"]
+
+    def __str__(self):
+        return self.email
+
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"
 
 
 class Shop(models.Model):
@@ -177,6 +272,12 @@ class Contact(models.Model):
     )
     name = models.CharField(max_length=100, verbose_name="Name")
     phone = models.CharField(max_length=20, verbose_name="Phone")
+    city = models.CharField(max_length=100, verbose_name="City", default="n/a")
+    street = models.CharField(max_length=100, verbose_name="Street", default="n/a")
+    house = models.CharField(max_length=100, verbose_name="House", default="n/a")
+    structure = models.CharField(max_length=100, verbose_name="Structure", blank=True)
+    building = models.CharField(max_length=100, verbose_name="Building", blank=True)
+    apartment = models.CharField(max_length=100, verbose_name="Apartment", blank=True)
 
     class Meta:
         verbose_name = "Contact"
