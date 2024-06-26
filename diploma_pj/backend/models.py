@@ -66,9 +66,12 @@ class ProductInfo(models.Model):
     Model representing product information.
     """
 
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Product")
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, verbose_name="Shop")
-    name = models.CharField(max_length=100, verbose_name="Product name")
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, verbose_name="Product", related_name="product_infos"
+    )
+    shop = models.ForeignKey(
+        Shop, on_delete=models.CASCADE, verbose_name="Shop", related_name="shop_infos"
+    )
     quantity = models.PositiveIntegerField(verbose_name="Quantity")
     price = models.PositiveIntegerField(verbose_name="Price")
     price_rrc = models.PositiveIntegerField(
@@ -78,7 +81,6 @@ class ProductInfo(models.Model):
     class Meta:
         verbose_name = "Product information"
         verbose_name_plural = "List of products information"
-        ordering = ("-name",)
 
 
 class Parameter(models.Model):
@@ -178,4 +180,4 @@ class Contact(models.Model):
 
     class Meta:
         verbose_name = "Contact"
-        verbose_name_plural = "List"
+        verbose_name_plural = "List of contacts"
