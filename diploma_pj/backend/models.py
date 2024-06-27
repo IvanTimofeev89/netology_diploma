@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from .validators import phone_validator
 
@@ -31,33 +32,28 @@ class UserManager(BaseUserManager):
 
     def create_user(self, email, password, **extra_fields):
         """
-        Create and save a regular user with the given email
-        and password.
-
-        :param email: The email address of the user.
-        :param password: The password for the user.
-        :param extra_fields: Additional fields to be saved for the user.
-        :return: The created user.
+        Create and save a User with the given email and password.
         """
+        if not email:
+            raise ValueError(_("The Email must be set"))
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
-        user.save(using=self._db)
+        user.save()
         return user
 
     def create_superuser(self, email, password, **extra_fields):
         """
-        Create and save a superuser with the given email and password.
-
-        :param email: The email address of the superuser.
-        :param password: The password for the superuser.
-        :param extra_fields: Additional fields to be saved for the superuser.
-        :return: The created superuser.
+        Create and save a SuperUser with the given email and password.
         """
-
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
 
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError(_("Superuser must have is_staff=True."))
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError(_("Superuser must have is_superuser=True."))
         return self.create_user(email, password, **extra_fields)
 
 
@@ -79,10 +75,10 @@ class User(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    objects = UserManager()
-
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
+
+    objects = UserManager()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
