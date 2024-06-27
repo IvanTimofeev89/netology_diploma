@@ -32,5 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
-        fields = "phone"
+        fields = ("id", "city", "street", "house", "structure", "building", "apartment", "phone")
         read_only_fields = ("id",)
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["user"]
+        return Contact.objects.create(**validated_data)

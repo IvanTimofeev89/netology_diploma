@@ -6,7 +6,7 @@ User = get_user_model()
 
 class EmailPasswordPermission(BasePermission):
     def has_permission(self, request, view):
-        # email = request.headers.get('email')
+        email = request.headers.get("email")
         # password = request.headers.get('password')
         #
         # if email and password:
@@ -15,6 +15,9 @@ class EmailPasswordPermission(BasePermission):
         #     except User.DoesNotExist:
         #         return False
         # if user.check_password(password):
+        #     request.user = user
         #     return True
         # return False
+        user = User.objects.get(email=email)
+        request.user = user
         return True

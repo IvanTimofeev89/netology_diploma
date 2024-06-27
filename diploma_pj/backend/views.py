@@ -29,7 +29,7 @@ class CreateContact(APIView):
     permission_classes = [EmailPasswordPermission]
 
     def post(self, request):
-        serializer = ContactSerializer(data=request.data)
+        serializer = ContactSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Contact created successfully"})
