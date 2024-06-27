@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -8,7 +9,7 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.utils import timezone
 
-from diploma_pj.backend.validators import phone_validator
+from .validators import phone_validator
 
 # Choices for the status of an order
 STATUS_CHOICES = (
@@ -106,10 +107,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "email"]
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password)
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
 
     class Meta:
         verbose_name = "User"
@@ -279,9 +286,9 @@ class Contact(models.Model):
             phone_validator,
         ],
     )
-    city = models.CharField(max_length=100, verbose_name="City", default="n/a")
-    street = models.CharField(max_length=100, verbose_name="Street", default="n/a")
-    house = models.CharField(max_length=100, verbose_name="House", default="n/a")
+    city = models.CharField(max_length=100, verbose_name="City", blank=True)
+    street = models.CharField(max_length=100, verbose_name="Street", blank=True)
+    house = models.CharField(max_length=100, verbose_name="House", blank=True)
     structure = models.CharField(max_length=100, verbose_name="Structure", blank=True)
     building = models.CharField(max_length=100, verbose_name="Building", blank=True)
     apartment = models.CharField(max_length=100, verbose_name="Apartment", blank=True)

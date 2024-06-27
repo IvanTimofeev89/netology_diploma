@@ -138,3 +138,10 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
 }
+
+AUTHENTICATION_BACKENDS = [
+    "backend.backends.CustomUserModelBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+AUTH_USER_MODEL = "backend.User"

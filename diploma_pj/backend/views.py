@@ -1,9 +1,9 @@
-# from django.shortcuts import render
 from django.http import JsonResponse
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
-from .serializers import UserSerializer
+from .permissions import LoginPasswordPermission
+from .serializers import ContactSerializer, UserSerializer
 
 
 # Create your views here.
@@ -23,13 +23,13 @@ class RegisterUser(APIView):
 
 class CreateContact(APIView):
     """
-    Class for creating contacts.
+    Class for contact creation.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [LoginPasswordPermission]
 
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Contact created successfully"})
