@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
-from .permissions import LoginPasswordPermission
+from .permissions import EmailPasswordPermission
 from .serializers import ContactSerializer, UserSerializer
 
 
@@ -26,7 +26,7 @@ class CreateContact(APIView):
     Class for contact creation.
     """
 
-    permission_classes = [LoginPasswordPermission]
+    permission_classes = [EmailPasswordPermission]
 
     def post(self, request):
         serializer = ContactSerializer(data=request.data)

@@ -13,12 +13,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         password = self.initial_data.get("password")
+        email = self.initial_data.get("email")
         if not password:
             raise serializers.ValidationError("Password is required")
+        if not email:
+            raise serializers.ValidationError("Email is required")
         try:
-            validate_password(password)
+            validated_password = validate_password(password)
         except ValidationError as error:
             raise serializers.ValidationError({"password": error})
+        data["password"] = validated_password
         return data
 
     def create(self, validated_data):

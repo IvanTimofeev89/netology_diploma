@@ -34,7 +34,9 @@ class UserManager(BaseUserManager):
     Custom manager for the User model, providing methods to create regular users and superusers.
     """
 
-    def create_user(self, email, first_name, last_name, password=None, **extra_fields):
+    use_in_migrations = True
+
+    def create_user(self, email, first_name, last_name, password, **extra_fields):
         """
         Create and save a regular user with the given email,
         first name, last name, family name, and password.
@@ -46,8 +48,6 @@ class UserManager(BaseUserManager):
         :param extra_fields: Additional fields to be saved for the user.
         :return: The created user.
         """
-        if not email:
-            raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
         user = self.model(
             email=email,
@@ -55,7 +55,9 @@ class UserManager(BaseUserManager):
             last_name=last_name,
             **extra_fields,
         )
-        user.set_password(password)
+
+        user.password = make_password(password, hasher="bcrypt_sha256")
+        print(f"Hashed password: {user.password}")
         user.save(using=self._db)
         return user
 
@@ -71,6 +73,7 @@ class UserManager(BaseUserManager):
         :param extra_fields: Additional fields to be saved for the superuser.
         :return: The created superuser.
         """
+
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -116,7 +119,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return check_password(raw_password, self.password)
 
     def set_password(self, raw_password):
-        self.password = make_password(raw_password)
+        self.password = make_password(raw_password, hasher="bcrypt_sha256")
 
     class Meta:
         verbose_name = "User"
