@@ -53,10 +53,9 @@ class UserManager(BaseUserManager):
             email=email,
             first_name=first_name,
             last_name=last_name,
+            password=make_password(password, hasher="bcrypt_sha256"),
             **extra_fields,
         )
-
-        user.password = make_password(password, hasher="bcrypt_sha256")
         print(f"Hashed password: {user.password}")
         user.save(using=self._db)
         return user
