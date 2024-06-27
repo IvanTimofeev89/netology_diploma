@@ -1,11 +1,4 @@
-from django.contrib.auth.hashers import check_password, make_password
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    Group,
-    Permission,
-    PermissionsMixin,
-)
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 
@@ -36,38 +29,27 @@ class UserManager(BaseUserManager):
 
     use_in_migrations = True
 
-    def create_user(self, email, first_name, last_name, password, **extra_fields):
+    def create_user(self, email, password, **extra_fields):
         """
-        Create and save a regular user with the given email,
-        first name, last name, family name, and password.
+        Create and save a regular user with the given email
+        and password.
 
         :param email: The email address of the user.
-        :param first_name: The first name of the user.
-        :param last_name: The last name of the user.
         :param password: The password for the user.
         :param extra_fields: Additional fields to be saved for the user.
         :return: The created user.
         """
         email = self.normalize_email(email)
-        user = self.model(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            password=make_password(password, hasher="bcrypt_sha256"),
-            **extra_fields,
-        )
-        print(f"Hashed password: {user.password}")
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, first_name, last_name, password=None, **extra_fields):
+    def create_superuser(self, email, password, **extra_fields):
         """
-        Create and save a superuser with the given email,
-        first name, last name, middle name, and password.
+        Create and save a superuser with the given email and password.
 
         :param email: The email address of the superuser.
-        :param first_name: The first name of the superuser.
-        :param last_name: The last name of the superuser.
         :param password: The password for the superuser.
         :param extra_fields: Additional fields to be saved for the superuser.
         :return: The created superuser.
@@ -76,10 +58,10 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(email, first_name, last_name, password, **extra_fields)
+        return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser):
     """
     Model to override standard django User model with additional fields.
     """
@@ -88,23 +70,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         choices=CONTACT_TYPES, verbose_name="Type", max_length=20, default="buyer"
     )
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
     middle_name = models.CharField(max_length=30, blank=True)
     company = models.CharField(max_length=100, blank=True)
     position = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
-    groups = models.ManyToManyField(
-        Group, verbose_name="groups", blank=True, related_name="custom_user_groups"
-    )
-    user_permissions = models.ManyToManyField(
-        Permission,
-        verbose_name="user permissions",
-        blank=True,
-        related_name="custom_user_permissions",
-    )
 
     objects = UserManager()
 
@@ -114,11 +87,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
-
-    def set_password(self, raw_password):
-        self.password = make_password(raw_password, hasher="bcrypt_sha256")
+    # def check_password(self, raw_password):
+    #     return check_password(raw_password, self.password)
+    #
+    # def set_password(self, raw_password):
+    #     self.password = make_password(raw_password, hasher="bcrypt_sha256")
 
     class Meta:
         verbose_name = "User"
