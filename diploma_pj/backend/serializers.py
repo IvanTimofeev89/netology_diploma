@@ -8,8 +8,7 @@ from .models import Contact, User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "first_name", "last_name")
-        read_only_fields = ("id",)
+        fields = ("email", "first_name", "last_name")
 
     def validate(self, data):
         password = self.initial_data.get("password")
@@ -29,7 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
-class ContactSerializer(serializers.ModelSerializer):
+class ContactCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = ("id", "city", "street", "house", "structure", "building", "apartment", "phone")
@@ -38,3 +37,11 @@ class ContactSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["user"]
         return Contact.objects.create(**validated_data)
+
+
+class ContactRetrieveSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Contact
+        fields = ("user", "city", "street", "house", "structure", "building", "apartment", "phone")

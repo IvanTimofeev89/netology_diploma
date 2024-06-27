@@ -2,8 +2,13 @@ from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+from .models import Contact
 from .permissions import EmailPasswordPermission
-from .serializers import ContactSerializer, UserSerializer
+from .serializers import (
+    ContactCreateSerializer,
+    ContactRetrieveSerializer,
+    UserSerializer,
+)
 
 
 # Create your views here.
@@ -17,11 +22,13 @@ class RegisterUser(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            serializer.save()
+            user = serializer.save()
+            user.set_password(request.data["password"])
+            user.save()
             return JsonResponse({"message": "User created successfully"})
 
 
-class CreateContact(APIView):
+class ManageContact(APIView):
     """
     Class for contact creation.
     """
@@ -29,7 +36,21 @@ class CreateContact(APIView):
     permission_classes = [EmailPasswordPermission]
 
     def post(self, request):
-        serializer = ContactSerializer(data=request.data, context={"user": request.user})
+        serializer = ContactCreateSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Contact created successfully"})
+        else:
+            return JsonResponse({"message": serializer.errors})
+
+    def get(self, request):
+        user_contacts = Contact.objects.all()
+        serializer = ContactRetrieveSerializer(user_contacts, many=True)
+        return JsonResponse(serializer.data, safe=False)
+
+    # def get_permissions(self):
+    #     if self.request.method == 'POST':
+    #         return [EmailPasswordPermission()]
+    #     if self.request.method == 'GET':
+    #         return [IsOwnerOrAdminPermission()]
+    #     return super().get_permissions()
