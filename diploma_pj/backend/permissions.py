@@ -16,15 +16,14 @@ class EmailPasswordPermission(BasePermission):
                 return False
             if user.check_password(password):
                 request.user = user
-                return True
-        return False
+                return user
+        return None
 
 
 class EmailOrTokenPermission(BasePermission):
     def has_permission(self, request, view):
-        return EmailPasswordPermission() or IsAuthenticated()
-
-
-# class IsOwnerOrAdminPermission(BasePermission):
-#     def has_permission(self, request, view):
-#         return EmailPasswordPermission() or IsAdminUser()
+        user = EmailPasswordPermission().has_permission(request, view)
+        if user:
+            request.user = user
+            return True
+        return IsAuthenticated().has_permission(request, view)
