@@ -3,13 +3,15 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
-from .models import Contact
+from .models import Contact, User
 from .permissions import EmailOrTokenPermission, EmailPasswordPermission
 from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
+    RegisterUserSerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
 
 
@@ -34,7 +36,7 @@ class RegisterUser(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             user.set_password(request.data["password"])
@@ -49,6 +51,11 @@ class ManageContact(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
+    def get(self, request):
+        user_contacts = Contact.objects.filter(user=request.user)
+        serializer = ContactRetrieveSerializer(user_contacts, many=True)
+        return JsonResponse(serializer.data, safe=False)
+
     def post(self, request):
         serializer = ContactCreateSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
@@ -57,12 +64,7 @@ class ManageContact(APIView):
         else:
             return JsonResponse({"message": serializer.errors})
 
-    def get(self, request):
-        user_contacts = Contact.objects.all()
-        serializer = ContactRetrieveSerializer(user_contacts, many=True)
-        return JsonResponse(serializer.data, safe=False)
-
-    def put(self, request):
+    def patch(self, request):
         serializer = ContactUpdateSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -73,3 +75,24 @@ class ManageContact(APIView):
     def delete(self, request):
         Contact.objects.filter(user=request.user).delete()
         return JsonResponse({"message": "Contacts deleted successfully"})
+
+
+class ManageUserAccount(APIView):
+    """
+    Class for user account reading, updating and deletion.
+    """
+
+    permission_classes = [EmailOrTokenPermission]
+
+    def get(self, request):
+        user = User.objects.get(email=request.user.email)
+        serializer = UserSerializer(user)
+        return JsonResponse(serializer.data, safe=False)
+
+    def patch(self, request):
+        serializer = UserUpdateSerializer(data=request.data, context={"email": request.user.email})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return JsonResponse({"message": "User updated successfully"})
+        else:
+            return JsonResponse({"message": serializer.errors})

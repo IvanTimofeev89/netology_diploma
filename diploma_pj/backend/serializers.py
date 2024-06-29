@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import Contact, User
 
 
-class UserSerializer(serializers.ModelSerializer):
+class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "first_name", "last_name")
@@ -46,12 +46,28 @@ class ContactUpdateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["user"] = self.context["user"]
-        return Contact.objects.update(**validated_data)
+        return Contact.objects.filter(user=self.context["user"]).update(**validated_data)
 
 
 class ContactRetrieveSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = RegisterUserSerializer()
 
     class Meta:
         model = Contact
         fields = ("user", "city", "street", "house", "structure", "building", "apartment", "phone")
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("email", "first_name", "last_name", "company", "position")
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("first_name", "last_name", "middle_name", "company", "position")
+
+    def create(self, validated_data):
+        email = self.context["email"]
+        return User.objects.filter(email=email).update(**validated_data)
