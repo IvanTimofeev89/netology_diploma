@@ -73,6 +73,7 @@ class User(AbstractBaseUser):
     position = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = "email"
@@ -82,12 +83,6 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-
-    # def check_password(self, raw_password):
-    #     return check_password(raw_password, self.password)
-    #
-    # def set_password(self, raw_password):
-    #     self.password = make_password(raw_password, hasher="bcrypt_sha256")
 
     class Meta:
         verbose_name = "User"

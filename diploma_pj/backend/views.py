@@ -1,9 +1,10 @@
 from django.http import JsonResponse
+from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from .models import Contact
-from .permissions import EmailPasswordPermission
+from .permissions import EmailOrTokenPermission, EmailPasswordPermission
 from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
@@ -11,7 +12,19 @@ from .serializers import (
 )
 
 
-# Create your views here.
+class LoginView(APIView):
+    """
+    Class to achieve Token by provided user's email and password.
+    """
+
+    permission_classes = [EmailPasswordPermission]
+
+    def post(self, request):
+        user = request.user
+        token, created = Token.objects.get_or_create(user=user)
+        return JsonResponse({"token": token.key})
+
+
 class RegisterUser(APIView):
     """
     Class for user registration.
@@ -33,7 +46,7 @@ class ManageContact(APIView):
     Class for contact creation.
     """
 
-    permission_classes = [EmailPasswordPermission]
+    permission_classes = [EmailOrTokenPermission]
 
     def post(self, request):
         serializer = ContactCreateSerializer(data=request.data, context={"user": request.user})
