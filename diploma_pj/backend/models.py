@@ -247,7 +247,6 @@ class Contact(models.Model):
     phone = models.CharField(
         max_length=20,
         verbose_name="Phone",
-        unique=True,
         validators=[
             phone_validator,
         ],

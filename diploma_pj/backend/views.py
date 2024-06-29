@@ -8,6 +8,7 @@ from .permissions import EmailOrTokenPermission, EmailPasswordPermission
 from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
+    ContactUpdateSerializer,
     UserSerializer,
 )
 
@@ -61,9 +62,10 @@ class ManageContact(APIView):
         serializer = ContactRetrieveSerializer(user_contacts, many=True)
         return JsonResponse(serializer.data, safe=False)
 
-    # def get_permissions(self):
-    #     if self.request.method == 'POST':
-    #         return [EmailPasswordPermission()]
-    #     if self.request.method == 'GET':
-    #         return [IsOwnerOrAdminPermission()]
-    #     return super().get_permissions()
+    def put(self, request):
+        serializer = ContactUpdateSerializer(data=request.data, context={"user": request.user})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return JsonResponse({"message": "Contact updated successfully"})
+        else:
+            return JsonResponse({"message": serializer.errors})

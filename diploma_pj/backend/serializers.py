@@ -39,6 +39,16 @@ class ContactCreateSerializer(serializers.ModelSerializer):
         return Contact.objects.create(**validated_data)
 
 
+class ContactUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contact
+        fields = ("city", "street", "house", "structure", "building", "apartment", "phone")
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["user"]
+        return Contact.objects.update(**validated_data)
+
+
 class ContactRetrieveSerializer(serializers.ModelSerializer):
     user = UserSerializer()
 
