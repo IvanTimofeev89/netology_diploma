@@ -44,7 +44,7 @@ class RegisterUser(APIView):
 
 class ManageContact(APIView):
     """
-    Class for contact creation.
+    Class for contact reading, creation, updating and deletion.
     """
 
     permission_classes = [EmailOrTokenPermission]
@@ -69,3 +69,7 @@ class ManageContact(APIView):
             return JsonResponse({"message": "Contact updated successfully"})
         else:
             return JsonResponse({"message": serializer.errors})
+
+    def delete(self, request):
+        Contact.objects.filter(user=request.user).delete()
+        return JsonResponse({"message": "Contacts deleted successfully"})
