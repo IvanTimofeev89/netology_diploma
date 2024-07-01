@@ -1,5 +1,8 @@
+# import requests
+from django.core.validators import URLValidator
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
@@ -15,7 +18,7 @@ from .serializers import (
 )
 
 
-class LoginView(APIView):
+class Login(APIView):
     """
     Class to achieve Token by provided user's email and password.
     """
@@ -96,3 +99,26 @@ class ManageUserAccount(APIView):
             return JsonResponse({"message": "User updated successfully"})
         else:
             return JsonResponse({"message": serializer.errors})
+
+
+class PartnerUpdate(APIView):
+    """
+    Class for partner updating.
+    """
+
+    permission_classes = [EmailOrTokenPermission]
+
+    def post(self, request):
+        user = request.user
+        if user.type != "shop":
+            return JsonResponse({"message": "Only for shops"}, status=403)
+        url = request.data.get("url")
+        if url:
+            url_validator = URLValidator()
+            try:
+                url_validator(url)
+            except ValidationError as error:
+                return JsonResponse({"message": error}, status=400)
+
+            # response = requests.get(url)
+            print("hi")

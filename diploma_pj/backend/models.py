@@ -1,4 +1,10 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    Group,
+    Permission,
+    PermissionsMixin,
+)
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -57,7 +63,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, PermissionsMixin):
     """
     Model to override standard django User model with additional fields.
     """
@@ -75,6 +81,15 @@ class User(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    groups = models.ManyToManyField(
+        Group, verbose_name="groups", blank=True, related_name="custom_user_groups"
+    )
+    user_permissions = models.ManyToManyField(
+        Permission,
+        verbose_name="user permissions",
+        blank=True,
+        related_name="custom_user_permissions",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
@@ -96,6 +111,9 @@ class Shop(models.Model):
 
     name = models.CharField(max_length=100, verbose_name="Shop name")
     url = models.URLField(null=True, blank=True, verbose_name="Shop URL")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, verbose_name="User", related_name="user_shop"
+    )
 
     class Meta:
         verbose_name = "Shop"
