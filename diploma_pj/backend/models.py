@@ -66,8 +66,8 @@ class User(AbstractBaseUser):
         choices=CONTACT_TYPES, verbose_name="Type", max_length=20, default="buyer"
     )
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
     middle_name = models.CharField(max_length=30, blank=True)
     company = models.CharField(max_length=100, blank=True)
     position = models.CharField(max_length=100, blank=True)

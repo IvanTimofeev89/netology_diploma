@@ -13,6 +13,7 @@ class RegisterUserSerializer(serializers.ModelSerializer):
     def validate(self, data):
         password = self.initial_data.get("password")
         email = self.initial_data.get("email")
+
         if not password:
             raise serializers.ValidationError("Password is required")
         if not email:
@@ -22,6 +23,13 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         except ValidationError as error:
             raise serializers.ValidationError({"password": error})
         data["password"] = validated_password
+        data.update(
+            {
+                key: value
+                for key, value in self.initial_data.items()
+                if key in ["middle_name", "company", "position"]
+            }
+        )
         return data
 
     def create(self, validated_data):
