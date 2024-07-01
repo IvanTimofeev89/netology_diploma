@@ -144,7 +144,8 @@ class PartnerUpdate(APIView):
 
             for elem in yaml_data.get("categories"):
                 category, _ = Category.objects.get_or_create(
-                    external_id=elem["id"], name=elem["name"])
+                    external_id=elem["id"], name=elem["name"]
+                )
                 category.shops.set([shop])
 
                 filtered_by_category_goods = filter(
@@ -165,9 +166,7 @@ class PartnerUpdate(APIView):
                     for key, value in item["parameters"].items():
                         param_obj, _ = Parameter.objects.get_or_create(name=key)
                         ProductParameter.objects.create(
-                            product_info=prod_info_obj,
-                            parameter=param_obj,
-                            value=value
+                            product_info=prod_info_obj, parameter=param_obj, value=value
                         )
 
         return JsonResponse({"message": "Price list updated successfully"})
