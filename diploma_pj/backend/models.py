@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .validators import phone_validator
+from .validators import city_name_validator, phone_validator
 
 # Choices for the status of an order
 STATUS_CHOICES = (
@@ -241,7 +241,7 @@ class Contact(models.Model):
     Model representing a contact.
     """
 
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
     )
     phone = models.CharField(
@@ -251,12 +251,19 @@ class Contact(models.Model):
             phone_validator,
         ],
     )
-    city = models.CharField(max_length=100, verbose_name="City", blank=True)
+    city = models.CharField(
+        max_length=100,
+        verbose_name="City",
+        blank=True,
+        validators=[
+            city_name_validator,
+        ],
+    )
     street = models.CharField(max_length=100, verbose_name="Street", blank=True)
-    house = models.CharField(max_length=100, verbose_name="House", blank=True)
-    structure = models.CharField(max_length=100, verbose_name="Structure", blank=True)
-    building = models.CharField(max_length=100, verbose_name="Building", blank=True)
-    apartment = models.CharField(max_length=100, verbose_name="Apartment", blank=True)
+    house = models.CharField(max_length=10, verbose_name="House", blank=True)
+    structure = models.CharField(max_length=10, verbose_name="Structure", blank=True)
+    building = models.CharField(max_length=10, verbose_name="Building", blank=True)
+    apartment = models.CharField(max_length=10, verbose_name="Apartment", blank=True)
 
     class Meta:
         verbose_name = "Contact"
