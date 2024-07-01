@@ -120,6 +120,9 @@ class Shop(models.Model):
         verbose_name_plural = "List of shops"
         ordering = ("-name",)
 
+    def __str__(self):
+        return self.name
+
 
 class Category(models.Model):
     """
@@ -127,6 +130,7 @@ class Category(models.Model):
     """
 
     shops = models.ManyToManyField(Shop, verbose_name="Shops", related_name="categories")
+    external_id = models.PositiveIntegerField(verbose_name="External ID", blank=True)
     name = models.CharField(max_length=100, verbose_name="Category name")
 
     class Meta:
@@ -165,6 +169,7 @@ class ProductInfo(models.Model):
     price_rrc = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Recommended retail price"
     )
+    external_id = models.PositiveIntegerField(verbose_name="External ID", blank=True)
 
     class Meta:
         verbose_name = "Product information"

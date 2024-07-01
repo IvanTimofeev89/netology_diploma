@@ -1,12 +1,22 @@
-# import requests
+import requests
+import yaml
+from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
-from .models import Contact, User
+from .models import (
+    Category,
+    Contact,
+    Parameter,
+    Product,
+    ProductInfo,
+    ProductParameter,
+    Shop,
+    User,
+)
 from .permissions import EmailOrTokenPermission, EmailPasswordPermission
 from .serializers import (
     ContactCreateSerializer,
@@ -118,7 +128,46 @@ class PartnerUpdate(APIView):
             try:
                 url_validator(url)
             except ValidationError as error:
-                return JsonResponse({"message": error}, status=400)
+                return JsonResponse({"Error": str(error)}, status=400)
 
-            # response = requests.get(url)
-            print("hi")
+            response = requests.get(url)
+            yml_file = response.content
+
+            try:
+                yaml_data = yaml.safe_load(yml_file)
+            except yaml.YAMLError as error:
+                return JsonResponse({"Error": str(error)}, status=400)
+
+            shop_name = yaml_data.get("shop")
+            shop_url = yaml_data.get("url")
+            shop, _ = Shop.objects.get_or_create(name=shop_name, url=shop_url, user=user)
+
+            for elem in yaml_data.get("categories"):
+                category, _ = Category.objects.get_or_create(
+                    external_id=elem["id"], name=elem["name"])
+                category.shops.set([shop])
+
+                filtered_by_category_goods = filter(
+                    lambda x: x["category"] == category.external_id, yaml_data.get("goods")
+                )
+                ProductInfo.objects.filter(shop=shop).delete()
+                for item in filtered_by_category_goods:
+                    product, _ = Product.objects.get_or_create(name=item["name"], category=category)
+                    prod_info_obj = ProductInfo.objects.create(
+                        product=product,
+                        shop=shop,
+                        quantity=item["quantity"],
+                        price=item["price"],
+                        price_rrc=item["price_rrc"],
+                        external_id=item["id"],
+                    )
+
+                    for key, value in item["parameters"].items():
+                        param_obj, _ = Parameter.objects.get_or_create(name=key)
+                        ProductParameter.objects.create(
+                            product_info=prod_info_obj,
+                            parameter=param_obj,
+                            value=value
+                        )
+
+        return JsonResponse({"message": "Price list updated successfully"})

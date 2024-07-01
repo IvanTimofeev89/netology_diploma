@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import Shop, User
 
 
 @admin.register(User)
@@ -23,3 +23,9 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
     filter_horizontal = ()
+
+
+@admin.register(Shop)
+class ShopAdmin(admin.ModelAdmin):
+    model = Shop
+    list_display = ("name", "url")
