@@ -140,18 +140,21 @@ class PartnerUpdate(APIView):
 
             shop_name = yaml_data.get("shop")
             shop_url = yaml_data.get("url")
+
             shop, _ = Shop.objects.get_or_create(name=shop_name, url=shop_url, user=user)
 
+            ProductInfo.objects.filter(shop=shop).delete()
             for elem in yaml_data.get("categories"):
                 category, _ = Category.objects.get_or_create(
                     external_id=elem["id"], name=elem["name"]
                 )
                 category.shops.set([shop])
+                category.save()
 
-                filtered_by_category_goods = filter(
-                    lambda x: x["category"] == category.external_id, yaml_data.get("goods")
+                filtered_by_category_goods = list(
+                    filter(lambda x: x["category"] == category.external_id, yaml_data.get("goods"))
                 )
-                ProductInfo.objects.filter(shop=shop).delete()
+
                 for item in filtered_by_category_goods:
                     product, _ = Product.objects.get_or_create(name=item["name"], category=category)
                     prod_info_obj = ProductInfo.objects.create(

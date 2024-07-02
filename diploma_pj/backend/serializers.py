@@ -8,7 +8,7 @@ from .models import Contact, User
 class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "middle_name", "company", "position")
+        fields = ("email", "first_name", "last_name", "middle_name", "company", "position", "type")
 
     def validate(self, data):
         password = self.initial_data.get("password")
