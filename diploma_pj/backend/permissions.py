@@ -57,7 +57,7 @@ class EmailPasswordPermission(BasePermission):
                 return user
         if token:
             return None
-        raise NeedLogin()
+        raise EmailPassExc()
 
 class EmailOrTokenPermission(BasePermission):
     def has_permission(self, request, view):
@@ -71,21 +71,21 @@ class EmailOrTokenPermission(BasePermission):
 class OnlyShopPermission(BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if user and user.type == "shop":
+        if user.type == "shop":
             return True
         raise OnlyShop()
 
 
-class NeedLogin(APIException):
-    status_code = status.HTTP_403_FORBIDDEN
+class EmailPassExc(APIException):
+    status_code = status.HTTP_401_UNAUTHORIZED
     default_detail = {
-        "error": True,
-        "message": "Email or password were incorrect or not provided.",
+        "detail": "Email or password were incorrect or not provided.",
     }
     default_code = "not_authenticated"
 
-
 class OnlyShop(APIException):
     status_code = status.HTTP_403_FORBIDDEN
-    default_detail = {"error": True, "message": "Only for Shops"}
+    default_detail = {
+        "detail": "Only for Shops"
+    }
     default_code = "not_authenticated"
