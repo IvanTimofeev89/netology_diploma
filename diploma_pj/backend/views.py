@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
@@ -23,11 +24,12 @@ from .permissions import (
     OnlyShopPermission,
 )
 from .serializers import (
+    CategorySerializer,
     ContactCreateSerializer,
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
     RegisterUserSerializer,
-    ShopStateSerializer,
+    ShopSerializer,
     UserSerializer,
     UserUpdateSerializer,
 )
@@ -192,9 +194,21 @@ class PartnerState(APIView):
         return JsonResponse({"shop_state": user.user_shop.state})
 
     def patch(self, request):
-        serializer = ShopStateSerializer(data=request.data, context={"user": request.user})
+        serializer = ShopSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Shop state updated successfully"})
         else:
             return JsonResponse({"message": serializer.errors})
+
+
+class ShopList(ListAPIView):
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
+    permission_classes = [AllowAny]
+
+
+class CategoryList(ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [AllowAny]

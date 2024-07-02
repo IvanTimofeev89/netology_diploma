@@ -114,8 +114,8 @@ class Shop(models.Model):
     Model representing a shop.
     """
 
-    name = models.CharField(max_length=100, verbose_name="Shop name")
-    url = models.URLField(null=True, blank=True, verbose_name="Shop URL")
+    name = models.CharField(max_length=100, verbose_name="Shop name", null=True, blank=True)
+    url = models.URLField(verbose_name="Shop URL", null=True, blank=True)
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="user_shop"
     )

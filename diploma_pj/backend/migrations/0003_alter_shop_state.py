@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0002_shop_state'),
+        ("backend", "0002_shop_state"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='shop',
-            name='state',
-            field=models.CharField(choices=[('on', 'ON'), ('off', 'OFF')], default='on', max_length=3, verbose_name='State of the shop'),
+            model_name="shop",
+            name="state",
+            field=models.CharField(
+                choices=[("on", "ON"), ("off", "OFF")],
+                default="on",
+                max_length=3,
+                verbose_name="State of the shop",
+            ),
         ),
     ]
