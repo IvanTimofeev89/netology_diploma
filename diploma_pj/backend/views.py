@@ -17,7 +17,11 @@ from .models import (
     Shop,
     User,
 )
-from .permissions import EmailOrTokenPermission, EmailPasswordPermission
+from .permissions import (
+    EmailOrTokenPermission,
+    EmailPasswordPermission,
+    OnlyShopPermission,
+)
 from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
@@ -173,3 +177,21 @@ class PartnerUpdate(APIView):
                         )
 
         return JsonResponse({"message": "Price list updated successfully"})
+
+
+class PartnerState(APIView):
+    """
+    Class for partner state updating and reading.
+    """
+
+    permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
+
+    def get(self, request):
+        user = request.user
+        return JsonResponse({"state": user.user_shop.state})
+
+    def post(self, request):
+        user = request.user
+        # user.state = request.data.get("state")
+        # user.save()
+        return JsonResponse({"state": user.state})

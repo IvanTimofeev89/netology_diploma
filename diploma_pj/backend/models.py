@@ -114,6 +114,7 @@ class Shop(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="user_shop"
     )
+    state = models.BooleanField(verbose_name="State of the shop", default=True)
 
     class Meta:
         verbose_name = "Shop"
