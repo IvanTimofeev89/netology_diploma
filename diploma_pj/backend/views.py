@@ -27,6 +27,7 @@ from .serializers import (
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
     RegisterUserSerializer,
+    ShopStateSerializer,
     UserSerializer,
     UserUpdateSerializer,
 )
@@ -176,7 +177,7 @@ class PartnerUpdate(APIView):
                             product_info=prod_info_obj, parameter=param_obj, value=value
                         )
 
-        return JsonResponse({"message": "Price list updated successfully"})
+        return JsonResponse({"message": "Goods list updated successfully"})
 
 
 class PartnerState(APIView):
@@ -188,10 +189,12 @@ class PartnerState(APIView):
 
     def get(self, request):
         user = request.user
-        return JsonResponse({"state": user.user_shop.state})
+        return JsonResponse({"shop_state": user.user_shop.state})
 
-    def post(self, request):
-        user = request.user
-        # user.state = request.data.get("state")
-        # user.save()
-        return JsonResponse({"state": user.state})
+    def patch(self, request):
+        serializer = ShopStateSerializer(data=request.data, context={"user": request.user})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return JsonResponse({"message": "Shop state updated successfully"})
+        else:
+            return JsonResponse({"message": serializer.errors})

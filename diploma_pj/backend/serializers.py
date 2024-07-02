@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from .models import Contact, User
+from .models import Contact, Shop, User
 
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -72,3 +72,13 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         email = self.context["email"]
         return User.objects.filter(email=email).update(**validated_data)
+
+
+class ShopStateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = ("state",)
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["user"]
+        return Shop.objects.filter(user=self.context["user"]).update(**validated_data)

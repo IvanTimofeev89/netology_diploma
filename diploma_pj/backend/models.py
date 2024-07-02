@@ -28,6 +28,11 @@ CONTACT_TYPES = (
     ("buyer", "Buyer"),
 )
 
+SHOP_STATES = (
+    ("on", "ON"),
+    ("off", "OFF"),
+)
+
 
 class UserManager(BaseUserManager):
     """
@@ -92,7 +97,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 
@@ -114,7 +119,9 @@ class Shop(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="user_shop"
     )
-    state = models.BooleanField(verbose_name="State of the shop", default=True)
+    state = models.CharField(
+        choices=SHOP_STATES, verbose_name="State of the shop", max_length=3, default="on"
+    )
 
     class Meta:
         verbose_name = "Shop"
