@@ -1,0 +1,90 @@
+shop: Ситилинк
+categories:
+  - id: 330
+    name: Стиральные машины
+  - id: 15
+    name: Аксессуары
+  - id: 1
+    name: Flash-накопители
+
+goods:
+  - id: 4216280
+    category: 330
+    model: MFE12W75B/W-C
+    name: Стиральная машина Midea MFE12W75B/W-C
+    price: 47990
+    price_rrc: 55000
+    quantity: 14
+    parameters:
+      "Стирка": 7.5 кг, 1200 об/мин
+      "Тип загрузки": вертикальная
+      "Класс (стирка/отжим/энергопотребление)": A/B/A
+      "Цвет": белый
+  - id: 8852413
+    category: 330
+    model: MFE11W65/W-C
+    name: Стиральная машина Midea MFE11W65/W-C
+    price: 39999
+    price_rrc: 50000
+    quantity: 20
+    parameters:
+      "Стирка": 6.5 кг, 1200 об/мин
+      "Тип загрузки": вертикальная
+      "Класс (стирка/отжим/энергопотребление)": A/B/A
+      "Цвет": белый
+  - id: 4289226
+    category: 330
+    model: KF-UME6201W
+    name: Стиральная машина KRAFT KF-UME6201W
+    price: 36000
+    price_rrc: 45000
+    quantity: 5
+    parameters:
+      "Стирка": 6 кг, 1000 об/мин
+      "Тип загрузки": вертикальная
+      "Класс (стирка/отжим/энергопотребление)":  A/C/A+++
+      "Цвет": белый
+  - id: 1232367
+    category: 15
+    model: samsung/galaxy-s20
+    name: Smartphone Samsung Galaxy S20 128GB (black)
+    price: 85000
+    price_rrc: 94990
+    quantity: 15
+    parameters:
+      "Screen Size (inches)": 6.2
+      "Resolution (pixels)": 3200x1440
+      "Internal Memory (GB)": 128
+      "Color": black
+  - id: 1424568
+    category: 15
+    model: samsung/galaxy-note20
+    name: Smartphone Samsung Galaxy Note20 256GB (mystic bronze)
+    price: 105000
+    price_rrc: 132000
+    quantity: 8
+    parameters:
+      "Screen Size (inches)": 6.7
+      "Resolution (pixels)": 2400x1080
+      "Internal Memory (GB)": 256
+      "Color": mystic bronze
+  - id: 1234354569
+    category: 1
+    model: sandisk/ultra-flair-64gb
+    name: USB Flash Drive SanDisk Ultra Flair 64GB (silver)
+    price: 2000
+    price_rrc: 3200
+    quantity: 150
+    parameters:
+      "Capacity (GB)": 64
+      "Color": silver
+  - id: 123674570
+    category: 1
+    model: kingston/datatraveler-32gb
+    name: USB Flash Drive Kingston DataTraveler 32GB (red)
+    price: 980
+    price_rrc: 1000
+    quantity: 18
+    parameters:
+      "Capacity (GB)": 32
+      "Color": red
