@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from .models import (
     Category,
     Contact,
+    Order,
     Parameter,
     Product,
     ProductInfo,
@@ -28,6 +29,7 @@ from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
+    OrderSerializer,
     RegisterUserSerializer,
     ShopSerializer,
     UserSerializer,
@@ -198,6 +200,29 @@ class PartnerState(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Shop state updated successfully"})
+        else:
+            return JsonResponse({"message": serializer.errors})
+
+
+class ManageOrder(APIView):
+    """
+    Class create and get orders.
+    """
+
+    permission_classes = [EmailOrTokenPermission]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return JsonResponse(serializer.data, safe=False)
+
+    def post(self, request):
+        serializer = OrderSerializer(data=request.data, context={"user": request.user})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return JsonResponse(
+                {"message": "Order created successfully", "order_id": serializer.data["id"]}
+            )
         else:
             return JsonResponse({"message": serializer.errors})
 
