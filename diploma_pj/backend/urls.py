@@ -8,6 +8,7 @@ from .views import (
     ManageUserAccount,
     PartnerState,
     PartnerUpdate,
+    ProductsList,
     RegisterUser,
     ShopList,
 )
@@ -24,4 +25,5 @@ urlpatterns = [
     path("shops/", ShopList.as_view(), name="shop_list"),
     path("categories/", CategoryList.as_view(), name="shop_list"),
     path("order/", ManageOrder.as_view(), name="order_handling"),
+    path("products/", ProductsList.as_view(), name="products_list"),
 ]

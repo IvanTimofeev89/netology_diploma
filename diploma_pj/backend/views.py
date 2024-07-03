@@ -30,6 +30,7 @@ from .serializers import (
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
     OrderSerializer,
+    ProductSerializer,
     RegisterUserSerializer,
     ShopSerializer,
     UserSerializer,
@@ -225,6 +226,30 @@ class ManageOrder(APIView):
             )
         else:
             return JsonResponse({"message": serializer.errors})
+
+
+class ProductsList(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        shop_id = request.query_params.get("shop_id")
+        category_id = request.query_params.get("category_id")
+
+        if shop_id and category_id:
+            try:
+                shop = Shop.objects.get(id=shop_id)
+                category = Category.objects.get(external_id=category_id)
+            except Shop.DoesNotExist:
+                return JsonResponse({"message": "Shop does not exist"}, status=400)
+            except Category.DoesNotExist:
+                return JsonResponse({"message": "Category does not exist"}, status=400)
+
+            products = Product.objects.filter(
+                category=category, product_infos__shop=shop
+            ).distinct()
+            serializer = ProductSerializer(products, many=True)
+            return JsonResponse(serializer.data, safe=False)
+        return JsonResponse({"message": "shop_id and category_id are required"}, status=400)
 
 
 class ShopList(ListAPIView):
