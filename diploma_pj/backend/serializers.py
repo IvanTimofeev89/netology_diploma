@@ -109,6 +109,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class ProductInfoSerializer(serializers.ModelSerializer):
     shop = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductInfo
         fields = ("quantity", "price_rrc", "shop")
@@ -116,6 +117,7 @@ class ProductInfoSerializer(serializers.ModelSerializer):
     def get_shop(self, obj):
         shop = Shop.objects.get(id=obj.shop_id)
         return {"shop_id": shop.id, "shop_name": shop.name}
+
 
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
@@ -128,3 +130,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_product_info(self, obj):
         product_info = ProductInfo.objects.filter(product=obj)
         return ProductInfoSerializer(product_info, many=True).data
+
+
+class GetBasketSerializer(serializers.ModelSerializer):
+    info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ("id", "date", "status", "info")
+        read_only_fields = ("id",)
+
+    def get_info(self, obj):
+        info_obj = ProductInfo.objects.filter(order=obj)
+        return {"name": info_obj.order_items__name, "quantity": info_obj.quantity}

@@ -20,6 +20,7 @@ STATUS_CHOICES = (
     ("delivered", "Delivered"),
     ("canceled", "Canceled"),
     ("returned", "Returned"),
+    ("basket", "Basket"),
 )
 
 # Choices for the type of contact

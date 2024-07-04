@@ -12,6 +12,7 @@ from .models import (
     Category,
     Contact,
     Order,
+    OrderItem,
     Parameter,
     Product,
     ProductInfo,
@@ -29,6 +30,7 @@ from .serializers import (
     ContactCreateSerializer,
     ContactRetrieveSerializer,
     ContactUpdateSerializer,
+    GetBasketSerializer,
     OrderSerializer,
     ProductSerializer,
     RegisterUserSerializer,
@@ -36,6 +38,7 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
 )
+from .validators import json_validator, product_available_validator
 
 
 class Login(APIView):
@@ -256,20 +259,34 @@ class ProductsList(APIView):
         return JsonResponse(serializer.data, safe=False)
 
 
-class ManageBusket(APIView):
+class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
     def get(self, request, *args, **kwargs):
-        pass
+        basket = Order.objects.filter(user=request.user, status="basket")
+        serializer = GetBasketSerializer(basket, many=True)
+        return JsonResponse(serializer.data, safe=False)
 
     def post(self, request, *args, **kwargs):
-        pass
+        items = request.data.get("items")
+        json_data = json_validator(items)
+        products_list = product_available_validator(json_data)
+        order, _ = Order.objects.get_or_create(user=request.user, status="basket")
+        for id_, elem in enumerate(json_data):
+            OrderItem.objects.create(
+                order=order,
+                product=products_list[id_].product,
+                quantity=elem["quantity"],
+                shop=products_list[id_].shop,
+            )
+        return JsonResponse({"message": "Basket created successfully"})
 
     def patch(self, request, *args, **kwargs):
         pass
 
     def delete(self, request, *args, **kwargs):
         pass
+
 
 class ShopList(ListAPIView):
     queryset = Shop.objects.all()
