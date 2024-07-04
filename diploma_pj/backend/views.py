@@ -247,8 +247,10 @@ class ProductsList(APIView):
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()
-            serializer = ProductSerializer(products, many=True)
-            return JsonResponse(serializer.data, safe=False)
+            if products:
+                serializer = ProductSerializer(products, many=True)
+                return JsonResponse(serializer.data, safe=False)
+            return JsonResponse({"message": "no products found"}, status=200)
         return JsonResponse({"message": "shop_id and category_id are required"}, status=400)
 
 
