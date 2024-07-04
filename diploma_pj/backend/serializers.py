@@ -29,64 +29,36 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
-class ContactCreateSerializer(serializers.ModelSerializer):
+class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
-        fields = ("id", "city", "street", "house", "structure", "building", "apartment", "phone")
+        fields = (
+            "id",
+            "city",
+            "street",
+            "house",
+            "structure",
+            "building",
+            "apartment",
+            "phone",
+            "user",
+        )
         read_only_fields = ("id",)
-
-    def create(self, validated_data):
-        validated_data["user"] = self.context["user"]
-        return Contact.objects.create(**validated_data)
-
-
-class ContactUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Contact
-        fields = ("city", "street", "house", "structure", "building", "apartment", "phone")
-
-    def create(self, validated_data):
-        validated_data["user"] = self.context["user"]
-        return Contact.objects.filter(user=self.context["user"]).update(**validated_data)
-
-
-class ContactRetrieveSerializer(serializers.ModelSerializer):
-    user = RegisterUserSerializer()
-
-    class Meta:
-        model = Contact
-        fields = ("user", "city", "street", "house", "structure", "building", "apartment", "phone")
+        extra_kwargs = {"user": {"write_only": True}}
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "company", "position")
-
-
-class UserUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("first_name", "last_name", "middle_name", "company", "position")
-
-    def create(self, validated_data):
-        email = self.context["email"]
-        return User.objects.filter(email=email).update(**validated_data)
+        fields = ("email", "first_name", "last_name", "middle_name", "company", "position")
+        read_only_fields = ("email",)
 
 
 class ShopSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
-        fields = (
-            "id",
-            "name",
-            "state",
-        )
+        fields = ("id", "name", "url", "state")
         read_only_fields = ("id",)
-
-    def create(self, validated_data):
-        validated_data["user"] = self.context["user"]
-        return Shop.objects.filter(user=self.context["user"]).update(**validated_data)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -99,12 +71,8 @@ class CategorySerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ("id", "date", "status")
+        fields = ("id", "date", "status", "user")
         read_only_fields = ("id",)
-
-    def create(self, validated_data):
-        validated_data["user"] = self.context["user"]
-        return Order.objects.create(**validated_data)
 
 
 class ProductInfoSerializer(serializers.ModelSerializer):

@@ -24,15 +24,22 @@ def json_validator(obj):
 
 
 def product_available_validator(json_data):
-    from .models import ProductInfo
+    from .models import ProductInfo, Shop
 
-    products_list = []
+    valid_products_list = []
     for elem in json_data:
         try:
+            Shop.objects.get(id=elem["shop"])
             product = ProductInfo.objects.get(shop=elem["shop"], id=elem["product_info"])
+        except Shop.DoesNotExist:
+            raise ValidationError({"error": f"Shop with id {elem['shop']} does not exist"})
         except ProductInfo.DoesNotExist:
-            raise ValidationError("Product is not available in this shop")
+            raise ValidationError(
+                {"error": f"Product with id {elem['product_info']} does not exist"}
+            )
         if product.quantity < elem["quantity"]:
-            raise ValidationError("Not enough product in stock")
-        products_list.append(product)
-    return products_list
+            raise ValidationError(
+                {"error": f"Not enough product with id {elem['product_info']} in stock"}
+            )
+        valid_products_list.append(product)
+    return valid_products_list

@@ -18,7 +18,6 @@ from .models import (
     ProductInfo,
     ProductParameter,
     Shop,
-    User,
 )
 from .permissions import (
     EmailOrTokenPermission,
@@ -27,31 +26,15 @@ from .permissions import (
 )
 from .serializers import (
     CategorySerializer,
-    ContactCreateSerializer,
-    ContactRetrieveSerializer,
-    ContactUpdateSerializer,
+    ContactSerializer,
     GetBasketSerializer,
     OrderSerializer,
     ProductSerializer,
     RegisterUserSerializer,
     ShopSerializer,
     UserSerializer,
-    UserUpdateSerializer,
 )
 from .validators import json_validator, product_available_validator
-
-
-class Login(APIView):
-    """
-    Class to achieve Token by provided user's email and password.
-    """
-
-    permission_classes = [EmailPasswordPermission]
-
-    def post(self, request, *args, **kwargs):
-        user = request.user
-        token, created = Token.objects.get_or_create(user=user)
-        return JsonResponse({"token": token.key})
 
 
 class RegisterUser(APIView):
@@ -61,13 +44,26 @@ class RegisterUser(APIView):
 
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             user.set_password(request.data["password"])
             user.save()
             return JsonResponse({"message": "User created successfully"})
+
+
+class Login(APIView):
+    """
+    Class to achieve Token by provided user's email and password.
+    """
+
+    permission_classes = [EmailPasswordPermission]
+
+    def post(self, request):
+        user = request.user
+        token, created = Token.objects.get_or_create(user=user)
+        return JsonResponse({"token": token.key})
 
 
 class ManageContact(APIView):
@@ -77,28 +73,31 @@ class ManageContact(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request, *args, **kwargs):
-        user_contacts = Contact.objects.filter(user=request.user)
-        serializer = ContactRetrieveSerializer(user_contacts, many=True)
+    def get(self, request):
+        user_contact = Contact.objects.get(user=request.user)
+        serializer = ContactSerializer(user_contact)
         return JsonResponse(serializer.data, safe=False)
 
     def post(self, request):
-        serializer = ContactCreateSerializer(data=request.data, context={"user": request.user})
+        request.data._mutable = True
+        request.data.update({"user": request.user.id})
+        serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Contact created successfully"})
         else:
             return JsonResponse({"message": serializer.errors})
 
-    def patch(self, request, *args, **kwargs):
-        serializer = ContactUpdateSerializer(data=request.data, context={"user": request.user})
+    def patch(self, request):
+        contact = request.user.contacts
+        serializer = ContactSerializer(contact, data=request.data, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Contact updated successfully"})
         else:
             return JsonResponse({"message": serializer.errors})
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request):
         Contact.objects.filter(user=request.user).delete()
         return JsonResponse({"message": "Contacts deleted successfully"})
 
@@ -110,13 +109,12 @@ class ManageUserAccount(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request, *args, **kwargs):
-        user = User.objects.get(email=request.user.email)
-        serializer = UserSerializer(user)
+    def get(self, request):
+        serializer = UserSerializer(request.user)
         return JsonResponse(serializer.data, safe=False)
 
-    def patch(self, request, *args, **kwargs):
-        serializer = UserUpdateSerializer(data=request.data, context={"email": request.user.email})
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "User updated successfully"})
@@ -131,7 +129,7 @@ class PartnerUpdate(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         user = request.user
         if user.type != "shop":
             return JsonResponse({"message": "Only for shops"}, status=403)
@@ -195,12 +193,12 @@ class PartnerState(APIView):
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         user = request.user
-        return JsonResponse({"shop_state": user.user_shop.state})
+        return JsonResponse({"message": f"Shop state is {user.user_shop.state.upper()}"})
 
-    def patch(self, request, *args, **kwargs):
-        serializer = ShopSerializer(data=request.data, context={"user": request.user})
+    def patch(self, request):
+        serializer = ShopSerializer(request.user.user_shop, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse({"message": "Shop state updated successfully"})
@@ -215,13 +213,14 @@ class ManageOrder(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         orders = Order.objects.filter(user=request.user)
         serializer = OrderSerializer(orders, many=True)
         return JsonResponse(serializer.data, safe=False)
 
-    def post(self, request, *args, **kwargs):
-        serializer = OrderSerializer(data=request.data, context={"user": request.user})
+    def post(self, request):
+        request.data.update({"user": request.user.id})
+        serializer = OrderSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return JsonResponse(
@@ -231,10 +230,11 @@ class ManageOrder(APIView):
             return JsonResponse({"message": serializer.errors})
 
 
+###################################################################################################
 class ProductsList(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         shop_id = request.query_params.get("shop_id")
         category_id = request.query_params.get("category_id")
 
@@ -262,24 +262,29 @@ class ProductsList(APIView):
 class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         basket = Order.objects.filter(user=request.user, status="basket")
         serializer = GetBasketSerializer(basket, many=True)
         return JsonResponse(serializer.data, safe=False)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         items = request.data.get("items")
-        json_data = json_validator(items)
-        products_list = product_available_validator(json_data)
-        order, _ = Order.objects.get_or_create(user=request.user, status="basket")
-        for id_, elem in enumerate(json_data):
-            OrderItem.objects.create(
-                order=order,
-                product=products_list[id_].product,
-                quantity=elem["quantity"],
-                shop=products_list[id_].shop,
-            )
-        return JsonResponse({"message": "Basket created successfully"})
+        data = json_validator(items)
+        if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
+            products_list = product_available_validator(data)
+            order, _ = Order.objects.get_or_create(user=request.user, status="basket")
+            for id_, elem in enumerate(data):
+                OrderItem.objects.create(
+                    order=order,
+                    product=products_list[id_].product,
+                    quantity=elem["quantity"],
+                    shop=products_list[id_].shop,
+                )
+            return JsonResponse({"message": "Basket created successfully"})
+        return JsonResponse(
+            {"message": "Following parameter are required: product_info, quantity, shop"},
+            status=400,
+        )
 
     def patch(self, request, *args, **kwargs):
         pass
