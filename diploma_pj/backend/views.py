@@ -34,7 +34,7 @@ from .serializers import (
     ShopSerializer,
     UserSerializer,
 )
-from .validators import json_validator, product_available_validator
+from .validators import json_validator, product_available_validator, shop_catelogy_exist
 
 
 class RegisterUser(APIView):
@@ -230,7 +230,7 @@ class ManageOrder(APIView):
             return JsonResponse({"message": serializer.errors})
 
 
-###################################################################################################
+
 class ProductsList(APIView):
     permission_classes = [AllowAny]
 
@@ -239,14 +239,7 @@ class ProductsList(APIView):
         category_id = request.query_params.get("category_id")
 
         if shop_id and category_id:
-            try:
-                shop = Shop.objects.get(id=shop_id)
-                category = Category.objects.get(external_id=category_id)
-            except Shop.DoesNotExist:
-                return JsonResponse({"message": "Shop does not exist"}, status=400)
-            except Category.DoesNotExist:
-                return JsonResponse({"message": "Category does not exist"}, status=400)
-
+            shop, category = shop_catelogy_exist(shop_id, category_id)
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()
@@ -258,7 +251,7 @@ class ProductsList(APIView):
         serializer = ProductSerializer(products, many=True)
         return JsonResponse(serializer.data, safe=False)
 
-
+###################################################################################################
 class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
