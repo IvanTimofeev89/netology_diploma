@@ -108,10 +108,14 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class ProductInfoSerializer(serializers.ModelSerializer):
+    shop = serializers.SerializerMethodField()
     class Meta:
         model = ProductInfo
-        fields = ("quantity", "price_rrc")
+        fields = ("quantity", "price_rrc", "shop")
 
+    def get_shop(self, obj):
+        shop = Shop.objects.get(id=obj.shop_id)
+        return {"shop_id": shop.id, "shop_name": shop.name}
 
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer()

@@ -251,7 +251,9 @@ class ProductsList(APIView):
                 serializer = ProductSerializer(products, many=True)
                 return JsonResponse(serializer.data, safe=False)
             return JsonResponse({"message": "no products found"}, status=200)
-        return JsonResponse({"message": "shop_id and category_id are required"}, status=400)
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
+        return JsonResponse(serializer.data, safe=False)
 
 
 class ManageBusket(APIView):
