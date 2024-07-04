@@ -45,7 +45,7 @@ class Login(APIView):
 
     permission_classes = [EmailPasswordPermission]
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         user = request.user
         token, created = Token.objects.get_or_create(user=user)
         return JsonResponse({"token": token.key})
@@ -58,7 +58,7 @@ class RegisterUser(APIView):
 
     permission_classes = [AllowAny]
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
@@ -74,7 +74,7 @@ class ManageContact(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         user_contacts = Contact.objects.filter(user=request.user)
         serializer = ContactRetrieveSerializer(user_contacts, many=True)
         return JsonResponse(serializer.data, safe=False)
@@ -87,7 +87,7 @@ class ManageContact(APIView):
         else:
             return JsonResponse({"message": serializer.errors})
 
-    def patch(self, request):
+    def patch(self, request, *args, **kwargs):
         serializer = ContactUpdateSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -95,7 +95,7 @@ class ManageContact(APIView):
         else:
             return JsonResponse({"message": serializer.errors})
 
-    def delete(self, request):
+    def delete(self, request, *args, **kwargs):
         Contact.objects.filter(user=request.user).delete()
         return JsonResponse({"message": "Contacts deleted successfully"})
 
@@ -107,12 +107,12 @@ class ManageUserAccount(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         user = User.objects.get(email=request.user.email)
         serializer = UserSerializer(user)
         return JsonResponse(serializer.data, safe=False)
 
-    def patch(self, request):
+    def patch(self, request, *args, **kwargs):
         serializer = UserUpdateSerializer(data=request.data, context={"email": request.user.email})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -128,7 +128,7 @@ class PartnerUpdate(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         user = request.user
         if user.type != "shop":
             return JsonResponse({"message": "Only for shops"}, status=403)
@@ -192,11 +192,11 @@ class PartnerState(APIView):
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         user = request.user
         return JsonResponse({"shop_state": user.user_shop.state})
 
-    def patch(self, request):
+    def patch(self, request, *args, **kwargs):
         serializer = ShopSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -212,12 +212,12 @@ class ManageOrder(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         orders = Order.objects.filter(user=request.user)
         serializer = OrderSerializer(orders, many=True)
         return JsonResponse(serializer.data, safe=False)
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = OrderSerializer(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -231,7 +231,7 @@ class ManageOrder(APIView):
 class ProductsList(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         shop_id = request.query_params.get("shop_id")
         category_id = request.query_params.get("category_id")
 
@@ -253,6 +253,21 @@ class ProductsList(APIView):
             return JsonResponse({"message": "no products found"}, status=200)
         return JsonResponse({"message": "shop_id and category_id are required"}, status=400)
 
+
+class ManageBusket(APIView):
+    permission_classes = [EmailOrTokenPermission]
+
+    def get(self, request, *args, **kwargs):
+        pass
+
+    def post(self, request, *args, **kwargs):
+        pass
+
+    def patch(self, request, *args, **kwargs):
+        pass
+
+    def delete(self, request, *args, **kwargs):
+        pass
 
 class ShopList(ListAPIView):
     queryset = Shop.objects.all()
