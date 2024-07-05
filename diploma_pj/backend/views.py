@@ -1,9 +1,10 @@
 import requests
 import yaml
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -34,7 +35,11 @@ from .serializers import (
     ShopSerializer,
     UserSerializer,
 )
-from .validators import json_validator, product_available_validator, shop_catelogy_exist
+from .validators import (
+    json_validator,
+    product_availability_validator,
+    shop_category_exist,
+)
 
 
 class RegisterUser(APIView):
@@ -138,8 +143,8 @@ class PartnerUpdate(APIView):
             url_validator = URLValidator()
             try:
                 url_validator(url)
-            except ValidationError as error:
-                return JsonResponse({"Error": str(error)}, status=400)
+            except DjangoValidationError as error:
+                return JsonResponse({"Error": str(error.message)}, status=400)
 
             response = requests.get(url)
             yml_file = response.content
@@ -230,7 +235,6 @@ class ManageOrder(APIView):
             return JsonResponse({"message": serializer.errors})
 
 
-
 class ProductsList(APIView):
     permission_classes = [AllowAny]
 
@@ -239,7 +243,7 @@ class ProductsList(APIView):
         category_id = request.query_params.get("category_id")
 
         if shop_id and category_id:
-            shop, category = shop_catelogy_exist(shop_id, category_id)
+            shop, category = shop_category_exist(shop_id, category_id)
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()
@@ -250,6 +254,7 @@ class ProductsList(APIView):
         products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
         return JsonResponse(serializer.data, safe=False)
+
 
 ###################################################################################################
 class ManageBasket(APIView):
@@ -264,7 +269,10 @@ class ManageBasket(APIView):
         items = request.data.get("items")
         data = json_validator(items)
         if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
-            products_list = product_available_validator(data)
+            try:
+                products_list = product_availability_validator(data)
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
             order, _ = Order.objects.get_or_create(user=request.user, status="basket")
             for id_, elem in enumerate(data):
                 OrderItem.objects.create(

@@ -1,6 +1,7 @@
 import json
 
 from django.core.validators import RegexValidator
+from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.exceptions import ValidationError
 
@@ -23,34 +24,89 @@ def json_validator(obj):
     return json_data
 
 
-def product_available_validator(json_data):
+# def product_availability_validator(json_data):
+#     from .models import ProductInfo, Shop
+#
+#     valid_products_list = []
+#     for elem in json_data:
+#         try:
+#             Shop.objects.get(id=elem["shop"])
+#             product = ProductInfo.objects.get(shop=elem["shop"], id=elem["product_info"])
+#         except Shop.DoesNotExist:
+#             raise ValidationError({"error": f"Shop with id {elem['shop']} does not exist"})
+#         except ProductInfo.DoesNotExist:
+#             raise ValidationError(
+#                 {"error": f"Product with id {elem['product_info']} does not exist"}
+#             )
+#         if product.quantity < elem["quantity"]:
+#             raise ValidationError(
+#                 {"error": f"Not enough product with id {elem['product_info']} in stock"}
+#             )
+#         valid_products_list.append(product)
+#     return valid_products_list
+
+
+def product_availability_validator(json_data):
     from .models import ProductInfo, Shop
 
+    shop_ids = {elem["shop"] for elem in json_data}
+    product_ids = {(elem["shop"], elem["product_info"]) for elem in json_data}
+
+    # Checking is shop exist
+    existing_shops = Shop.objects.filter(id__in=shop_ids).values_list("id", flat=True)
+    missing_shops = shop_ids - set(existing_shops)
+    if missing_shops:
+        if len(missing_shops) == 1:
+            raise ValidationError(f"Shop with id {list(missing_shops)[0]} does not exist")
+        missing_shops_list = ", ".join(map(str, missing_shops))
+        raise ValidationError(f"Shops with ids {missing_shops_list} do not exist")
+
+    # Checking of products availability and it's amount
+    query = Q()
+    for shop_id, product_id in product_ids:
+        query |= Q(shop=shop_id, id=product_id)
+    products = ProductInfo.objects.filter(query)
+
+    # A dist for fast search of product by shop and product_info
+    product_dict = {(product.shop_id, product.id): product for product in products}
+
     valid_products_list = []
-    for elem in json_data:
-        try:
-            Shop.objects.get(id=elem["shop"])
-            product = ProductInfo.objects.get(shop=elem["shop"], id=elem["product_info"])
-        except Shop.DoesNotExist:
-            raise ValidationError({"error": f"Shop with id {elem['shop']} does not exist"})
-        except ProductInfo.DoesNotExist:
+    for index, elem in enumerate(json_data):
+        product = product_dict.get((elem["shop"], elem["product_info"]))
+        if not product:
             raise ValidationError(
-                {"error": f"Product with id {elem['product_info']} does not exist"}
+                f"Product with id {elem['product_info']} in shop {elem['shop']} does not exist"
             )
         if product.quantity < elem["quantity"]:
-            raise ValidationError(
-                {"error": f"Not enough product with id {elem['product_info']} in stock"}
-            )
-        valid_products_list.append(product)
-    return valid_products_list
+            raise ValidationError(f"Not enough product with id {elem['product_info']} in stock")
+        valid_products_list.append((index, product))
 
-def shop_catelogy_exist(shop_id, category_id):
+    # List sorting according to index
+    valid_products_list.sort(key=lambda x: x[0])
+
+    # Return list of products with index
+    return [product for index, product in valid_products_list]
+
+
+def shop_category_exist(shop_id, category_id):
     from .models import Category, Shop
+
     try:
+        shop_exists = Shop.objects.filter(id=shop_id).exists()
+        category_exists = Category.objects.filter(external_id=category_id).exists()
+
+        if not shop_exists:
+            raise ValidationError({"error": f"Shop with id {shop_id} does not exist"})
+        if not category_exists:
+            raise ValidationError({"error": f"Category with id {category_id} does not exist"})
+
         shop = Shop.objects.get(id=shop_id)
         category = Category.objects.get(external_id=category_id)
+
+        return shop, category
+
     except Shop.DoesNotExist:
         raise ValidationError({"error": f"Shop with id {shop_id} does not exist"})
+
     except Category.DoesNotExist:
-        raise ValidationError({"error": f"Category with id {shop_id} does not exist"})
-    return shop, category
+        raise ValidationError({"error": f"Category with id {category_id} does not exist"})
