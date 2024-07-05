@@ -1,5 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db.models import F, Q
 from rest_framework import serializers
 
 from .models import (
@@ -108,13 +109,6 @@ class ProductSerializer(serializers.ModelSerializer):
         product_info = ProductInfo.objects.filter(product=obj)
         return ProductInfoSerializer(product_info, many=True).data
 
-
-class BasketProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = ("name",)
-
-
 class GetBasketSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
 
@@ -124,18 +118,50 @@ class GetBasketSerializer(serializers.ModelSerializer):
         read_only_fields = ("id",)
 
     def get_info(self, obj):
+        # Получаем все OrderItem для данного заказа (obj)
         order_items = OrderItem.objects.filter(order=obj)
 
-        serialized_items = []
-        for item in order_items:
-            product_info = ProductInfo.objects.get(product=item.product, shop=item.shop)
-            serialized_product = BasketProductSerializer(item.product).data
-            serialized_items.append(
-                {
-                    "name": serialized_product["name"],
-                    "price": product_info.price_rrc,
-                    "quantity": item.quantity,
-                }
-            )
+        # Собираем все id продуктов и магазинов для оптимизации запроса
+        product_ids = [item.product_id for item in order_items]
+        shop_ids = [item.shop_id for item in order_items]
 
-        return serialized_items
+        # Собираем Q-объекты для фильтрации ProductInfo
+        q_objects = Q()
+        for product_id, shop_id in zip(product_ids, shop_ids):
+            q_objects |= Q(product_id=product_id, shop_id=shop_id)
+
+        # Выполняем запрос к ProductInfo с использованием q_objects
+        product_infos = ProductInfo.objects.filter(q_objects)
+
+        # Сериализуем результат
+        serialized_items = []
+        for item, product_info in zip(order_items, product_infos):
+            serialized_items.append({
+                "name": product_info.product.name,
+                "price": product_info.price_rrc,
+                "quantity": item.quantity,
+            })
+
+# class GetBasketSerializer(serializers.ModelSerializer):
+#     info = serializers.SerializerMethodField()
+#
+#     class Meta:
+#         model = Order
+#         fields = ("id", "date", "status", "info")
+#         read_only_fields = ("id",)
+#
+#     def get_info(self, obj):
+#         order_items = OrderItem.objects.filter(order=obj)
+#
+#         serialized_items = []
+#         for item in order_items:
+#             product_info = ProductInfo.objects.get(product=item.product, shop=item.shop)
+#             serialized_items.append(
+#                 {
+#                     "name": product_info.product.name,
+#                     "price": product_info.price_rrc,
+#                     "quantity": item.quantity,
+#                 }
+#             )
+#
+#         return serialized_items
