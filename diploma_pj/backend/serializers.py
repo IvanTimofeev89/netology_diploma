@@ -1,6 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db.models import F, Q
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import (
@@ -109,6 +109,7 @@ class ProductSerializer(serializers.ModelSerializer):
         product_info = ProductInfo.objects.filter(product=obj)
         return ProductInfoSerializer(product_info, many=True).data
 
+
 class GetBasketSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
 
@@ -118,50 +119,59 @@ class GetBasketSerializer(serializers.ModelSerializer):
         read_only_fields = ("id",)
 
     def get_info(self, obj):
-        # Получаем все OrderItem для данного заказа (obj)
+        # order_items = OrderItem.objects.filter(order=obj)
+        #
+        # products = [item.product for item in order_items]
+        # shops = [item.shop for item in order_items]
+        #
+        # q_objects = Q()
+        # for product, shop in zip(products, shops):
+        #     q_objects |= Q(product=product, shop=shop)
+        #
+        # product_info_objs = ProductInfo.objects.filter(q_objects)
+        #
+        # serialized_items = []
+        # for item, product_info in zip(order_items, product_info_objs):
+        #     serialized_items.append(
+        #         {
+        #             "name": product_info.product.name,
+        #             "price": product_info.price_rrc,
+        #             "quantity": item.quantity,
+        #         }
+        #     )
+        # return serialized_items
         order_items = OrderItem.objects.filter(order=obj)
 
-        # Собираем все id продуктов и магазинов для оптимизации запроса
-        product_ids = [item.product_id for item in order_items]
-        shop_ids = [item.shop_id for item in order_items]
+        # Создаем словарь для хранения уникальных пар product_id и shop_id
+        unique_pairs = {}
+        for item in order_items:
+            unique_pairs[(item.product_id,
+                          item.shop_id)] = None  # Используем None в качестве значения, которое мы затем заменим на ProductInfo
 
-        # Собираем Q-объекты для фильтрации ProductInfo
+        # Создаем список Q-объектов для фильтрации ProductInfo
         q_objects = Q()
-        for product_id, shop_id in zip(product_ids, shop_ids):
+        for (product_id, shop_id) in unique_pairs.keys():
             q_objects |= Q(product_id=product_id, shop_id=shop_id)
 
-        # Выполняем запрос к ProductInfo с использованием q_objects
-        product_infos = ProductInfo.objects.filter(q_objects)
+        # Получаем ProductInfo в том же порядке, что и order_items
+        product_info_objs = list(ProductInfo.objects.filter(q_objects))
 
-        # Сериализуем результат
+        # Теперь заполняем словарь unique_pairs сами объектами ProductInfo
+        for product_info in product_info_objs:
+            unique_pairs[(product_info.product_id, product_info.shop_id)] = product_info
+
+        # Теперь unique_pairs содержит соответствующие ProductInfo для каждой пары product_id и shop_id в order_items
+        # Мы можем использовать этот словарь для построения результата, сохраняя порядок order_items
+
         serialized_items = []
-        for item, product_info in zip(order_items, product_infos):
+        for item in order_items:
+            product_info = unique_pairs[(item.product_id, item.shop_id)]
             serialized_items.append({
-                "name": product_info.product.name,
-                "price": product_info.price_rrc,
-                "quantity": item.quantity,
+
+                'name': product_info.product.name,
+
+                'price': product_info.price_rrc,
+                'quantity': item.quantity,
             })
 
-# class GetBasketSerializer(serializers.ModelSerializer):
-#     info = serializers.SerializerMethodField()
-#
-#     class Meta:
-#         model = Order
-#         fields = ("id", "date", "status", "info")
-#         read_only_fields = ("id",)
-#
-#     def get_info(self, obj):
-#         order_items = OrderItem.objects.filter(order=obj)
-#
-#         serialized_items = []
-#         for item in order_items:
-#             product_info = ProductInfo.objects.get(product=item.product, shop=item.shop)
-#             serialized_items.append(
-#                 {
-#                     "name": product_info.product.name,
-#                     "price": product_info.price_rrc,
-#                     "quantity": item.quantity,
-#                 }
-#             )
-#
-#         return serialized_items
+        return serialized_items
