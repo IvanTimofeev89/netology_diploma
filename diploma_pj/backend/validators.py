@@ -2,8 +2,9 @@ import json
 
 from django.core.validators import RegexValidator
 from django.db.models import Q
-from django.http import JsonResponse
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 phone_validator = RegexValidator(
     regex=r"^\+?1?\d{9,15}$",
@@ -19,8 +20,10 @@ city_name_validator = RegexValidator(
 def json_validator(obj):
     try:
         json_data = json.loads(obj)
-    except ValueError:
-        return JsonResponse({"Errors": "Incorrect request format"})
+        if not isinstance(json_data, dict):
+            raise ValueError("Invalid JSON format")
+    except (json.JSONDecodeError, ValueError):
+        return Response({"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST)
     return json_data
 
 

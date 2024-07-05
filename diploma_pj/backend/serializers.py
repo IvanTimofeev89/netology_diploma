@@ -2,7 +2,16 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from .models import Category, Contact, Order, Product, ProductInfo, Shop, User
+from .models import (
+    Category,
+    Contact,
+    Order,
+    OrderItem,
+    Product,
+    ProductInfo,
+    Shop,
+    User,
+)
 
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -100,6 +109,12 @@ class ProductSerializer(serializers.ModelSerializer):
         return ProductInfoSerializer(product_info, many=True).data
 
 
+class BasketProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ("name",)
+
+
 class GetBasketSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
 
@@ -109,5 +124,18 @@ class GetBasketSerializer(serializers.ModelSerializer):
         read_only_fields = ("id",)
 
     def get_info(self, obj):
-        info_obj = ProductInfo.objects.filter(order=obj)
-        return {"name": info_obj.order_items__name, "quantity": info_obj.quantity}
+        order_items = OrderItem.objects.filter(order=obj)
+
+        serialized_items = []
+        for item in order_items:
+            product_info = ProductInfo.objects.get(product=item.product, shop=item.shop)
+            serialized_product = BasketProductSerializer(item.product).data
+            serialized_items.append(
+                {
+                    "name": serialized_product["name"],
+                    "price": product_info.price_rrc,
+                    "quantity": item.quantity,
+                }
+            )
+
+        return serialized_items

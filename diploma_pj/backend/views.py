@@ -2,11 +2,14 @@ import requests
 import yaml
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
-from django.http import JsonResponse
+from django.db import transaction
+from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (
@@ -55,7 +58,11 @@ class RegisterUser(APIView):
             user = serializer.save()
             user.set_password(request.data["password"])
             user.save()
-            return JsonResponse({"message": "User created successfully"})
+            return Response(
+                {"message": "User created successfully"}, status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Login(APIView):
@@ -68,7 +75,7 @@ class Login(APIView):
     def post(self, request):
         user = request.user
         token, created = Token.objects.get_or_create(user=user)
-        return JsonResponse({"token": token.key})
+        return Response({"token": token.key}, status=status.HTTP_201_CREATED)
 
 
 class ManageContact(APIView):
@@ -81,7 +88,7 @@ class ManageContact(APIView):
     def get(self, request):
         user_contact = Contact.objects.get(user=request.user)
         serializer = ContactSerializer(user_contact)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         request.data._mutable = True
@@ -89,22 +96,27 @@ class ManageContact(APIView):
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return JsonResponse({"message": "Contact created successfully"})
+            return Response(
+                {"message": "Contact created successfully"}, status=status.HTTP_201_CREATED
+            )
         else:
-            return JsonResponse({"message": serializer.errors})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
-        contact = request.user.contacts
+        contact = get_object_or_404(Contact, user=request.user)
         serializer = ContactSerializer(contact, data=request.data, partial=True)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return JsonResponse({"message": "Contact updated successfully"})
+            return Response({"message": "Contact updated successfully"}, status=status.HTTP_200_OK)
         else:
-            return JsonResponse({"message": serializer.errors})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
-        Contact.objects.filter(user=request.user).delete()
-        return JsonResponse({"message": "Contacts deleted successfully"})
+        contact = get_object_or_404(Contact, user=request.user)
+        contact.delete()
+        return Response(
+            {"message": "Contacts deleted successfully"}, status=status.HTTP_204_NO_CONTENT
+        )
 
 
 class ManageUserAccount(APIView):
@@ -116,15 +128,15 @@ class ManageUserAccount(APIView):
 
     def get(self, request):
         serializer = UserSerializer(request.user)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
         serializer = UserSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return JsonResponse({"message": "User updated successfully"})
+            return Response({"message": "User updated successfully"}, status=status.HTTP_200_OK)
         else:
-            return JsonResponse({"message": serializer.errors})
+            return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PartnerUpdate(APIView):
@@ -136,59 +148,80 @@ class PartnerUpdate(APIView):
 
     def post(self, request):
         user = request.user
+
         if user.type != "shop":
-            return JsonResponse({"message": "Only for shops"}, status=403)
+            return Response({"message": "Only for shops"}, status=status.HTTP_403_FORBIDDEN)
         url = request.data.get("url")
-        if url:
+
+        if not url:
+            return Response(
+                {"error": "URL parameter is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
             url_validator = URLValidator()
-            try:
-                url_validator(url)
-            except DjangoValidationError as error:
-                return JsonResponse({"Error": str(error.message)}, status=400)
+            url_validator(url)
+        except DjangoValidationError as error:
+            return Response({"Error": str(error.message)}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
             response = requests.get(url)
+            response.raise_for_status()
             yml_file = response.content
+            yaml_data = yaml.safe_load(yml_file)
+        except requests.RequestException as error:
+            return Response(
+                {"error": f"Failed to fetch YAML data: {error}"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except yaml.YAMLError as error:
+            return Response({"Error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                yaml_data = yaml.safe_load(yml_file)
-            except yaml.YAMLError as error:
-                return JsonResponse({"Error": str(error)}, status=400)
-
+        try:
             shop_name = yaml_data.get("shop")
             shop_url = yaml_data.get("url")
 
-            shop, _ = Shop.objects.get_or_create(name=shop_name, url=shop_url, user=user)
+            with transaction.atomic():
+                shop, created = Shop.objects.get_or_create(name=shop_name, url=shop_url, user=user)
 
-            ProductInfo.objects.filter(shop=shop).delete()
-            for elem in yaml_data.get("categories"):
-                category, _ = Category.objects.get_or_create(
-                    external_id=elem["id"], name=elem["name"]
-                )
-                category.shops.set([shop])
-                category.save()
+                ProductInfo.objects.filter(shop=shop).delete()
 
-                filtered_by_category_goods = list(
-                    filter(lambda x: x["category"] == category.external_id, yaml_data.get("goods"))
-                )
-
-                for item in filtered_by_category_goods:
-                    product, _ = Product.objects.get_or_create(name=item["name"], category=category)
-                    prod_info_obj = ProductInfo.objects.create(
-                        product=product,
-                        shop=shop,
-                        quantity=item["quantity"],
-                        price=item["price"],
-                        price_rrc=item["price_rrc"],
-                        external_id=item["id"],
+                for category_data in yaml_data.get("categories", []):
+                    category, _ = Category.objects.get_or_create(
+                        external_id=category_data.get("id"),
+                        defaults={"name": category_data.get("name")},
                     )
+                    category.shops.add(shop)
 
-                    for key, value in item["parameters"].items():
-                        param_obj, _ = Parameter.objects.get_or_create(name=key)
-                        ProductParameter.objects.create(
-                            product_info=prod_info_obj, parameter=param_obj, value=value
+                    goods_list = yaml_data.get("goods", [])
+                    filtered_goods = [
+                        item for item in goods_list if item.get("category") == category.external_id
+                    ]
+
+                    for item in filtered_goods:
+                        product, _ = Product.objects.get_or_create(
+                            name=item.get("name"), category=category
+                        )
+                        prod_info_obj = ProductInfo.objects.create(
+                            product=product,
+                            shop=shop,
+                            quantity=item.get("quantity"),
+                            price=item.get("price"),
+                            price_rrc=item.get("price_rrc"),
+                            external_id=item.get("id"),
                         )
 
-        return JsonResponse({"message": "Goods list updated successfully"})
+                        for key, value in item.get("parameters", {}).items():
+                            param_obj, _ = Parameter.objects.get_or_create(name=key)
+                            ProductParameter.objects.create(
+                                product_info=prod_info_obj, parameter=param_obj, value=value
+                            )
+        except Exception as error:
+            return Response(
+                {"error": f"Failed to update goods list: {error}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"message": "Goods list updated successfully"}, status=status.HTTP_200_OK)
 
 
 class PartnerState(APIView):
@@ -200,15 +233,19 @@ class PartnerState(APIView):
 
     def get(self, request):
         user = request.user
-        return JsonResponse({"message": f"Shop state is {user.user_shop.state.upper()}"})
+        return Response(
+            {"message": f"Shop state is {user.user_shop.state.upper()}"}, status=status.HTTP_200_OK
+        )
 
     def patch(self, request):
         serializer = ShopSerializer(request.user.user_shop, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return JsonResponse({"message": "Shop state updated successfully"})
+            return Response(
+                {"message": "Shop state updated successfully"}, status=status.HTTP_200_OK
+            )
         else:
-            return JsonResponse({"message": serializer.errors})
+            return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ManageOrder(APIView):
@@ -221,18 +258,19 @@ class ManageOrder(APIView):
     def get(self, request):
         orders = Order.objects.filter(user=request.user)
         serializer = OrderSerializer(orders, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         request.data.update({"user": request.user.id})
         serializer = OrderSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return JsonResponse(
-                {"message": "Order created successfully", "order_id": serializer.data["id"]}
+            return Response(
+                {"message": "Order created successfully", "order_id": serializer.data["id"]},
+                status=status.HTTP_201_CREATED,
             )
         else:
-            return JsonResponse({"message": serializer.errors})
+            return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductsList(APIView):
@@ -249,25 +287,28 @@ class ProductsList(APIView):
             ).distinct()
             if products:
                 serializer = ProductSerializer(products, many=True)
-                return JsonResponse(serializer.data, safe=False)
-            return JsonResponse({"message": "no products found"}, status=200)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({"message": "no products found"}, status=status.HTTP_204_NO_CONTENT)
         products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-###################################################################################################
 class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
     def get(self, request):
         basket = Order.objects.filter(user=request.user, status="basket")
         serializer = GetBasketSerializer(basket, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         items = request.data.get("items")
         data = json_validator(items)
+
+        if isinstance(data, Response):
+            return data
+
         if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
             try:
                 products_list = product_availability_validator(data)
@@ -281,10 +322,10 @@ class ManageBasket(APIView):
                     quantity=elem["quantity"],
                     shop=products_list[id_].shop,
                 )
-            return JsonResponse({"message": "Basket created successfully"})
-        return JsonResponse(
+            return Response({"message": "Basket created successfully"})
+        return Response(
             {"message": "Following parameter are required: product_info, quantity, shop"},
-            status=400,
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     def patch(self, request, *args, **kwargs):
