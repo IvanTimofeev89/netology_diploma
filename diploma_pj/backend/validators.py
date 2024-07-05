@@ -20,7 +20,7 @@ city_name_validator = RegexValidator(
 def json_validator(obj):
     try:
         json_data = json.loads(obj)
-        if not isinstance(json_data, dict):
+        if not isinstance(json_data, dict | list):
             raise ValueError("Invalid JSON format")
     except (json.JSONDecodeError, ValueError):
         return Response({"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST)
@@ -56,8 +56,10 @@ def product_availability_validator(json_data):
     product_ids = {(elem["shop"], elem["product_info"]) for elem in json_data}
 
     # Checking is shop exist
-    existing_shops = Shop.objects.filter(id__in=shop_ids).values_list("id", flat=True)
-    missing_shops = shop_ids - set(existing_shops)
+    existing_shops = Shop.objects.filter(id__in=shop_ids).values_list("id", "state")
+    if not all([elem[1] == "on" for elem in existing_shops]):
+        raise ValidationError("All shops must be ON")
+    missing_shops = shop_ids - set([elem[0] for elem in existing_shops])
     if missing_shops:
         if len(missing_shops) == 1:
             raise ValidationError(f"Shop with id {list(missing_shops)[0]} does not exist")
@@ -70,7 +72,7 @@ def product_availability_validator(json_data):
         query |= Q(shop=shop_id, id=product_id)
     products = ProductInfo.objects.filter(query)
 
-    # A dist for fast search of product by shop and product_info
+    # A dict for fast search of product by shop and product_info
     product_dict = {(product.shop_id, product.id): product for product in products}
 
     valid_products_list = []

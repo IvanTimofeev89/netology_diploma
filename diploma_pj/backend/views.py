@@ -282,6 +282,8 @@ class ProductsList(APIView):
 
         if shop_id and category_id:
             shop, category = shop_category_exist(shop_id, category_id)
+            if shop.state == "off":
+                return Response({"message": "shop is off"}, status=status.HTTP_400_BAD_REQUEST)
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()

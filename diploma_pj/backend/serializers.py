@@ -18,7 +18,7 @@ from .models import (
 class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "middle_name", "company", "position", "type")
+        fields = ("email", "first_name", "last_name", "middle_name", "company", "position")
 
     def validate(self, data):
         password = self.initial_data.get("password")
@@ -60,7 +60,7 @@ class ContactSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "first_name", "last_name", "middle_name", "company", "position")
+        fields = ("email", "first_name", "last_name", "middle_name", "company", "position", "type")
         read_only_fields = ("email",)
 
 
@@ -119,59 +119,36 @@ class GetBasketSerializer(serializers.ModelSerializer):
         read_only_fields = ("id",)
 
     def get_info(self, obj):
-        # order_items = OrderItem.objects.filter(order=obj)
-        #
-        # products = [item.product for item in order_items]
-        # shops = [item.shop for item in order_items]
-        #
-        # q_objects = Q()
-        # for product, shop in zip(products, shops):
-        #     q_objects |= Q(product=product, shop=shop)
-        #
-        # product_info_objs = ProductInfo.objects.filter(q_objects)
-        #
-        # serialized_items = []
-        # for item, product_info in zip(order_items, product_info_objs):
-        #     serialized_items.append(
-        #         {
-        #             "name": product_info.product.name,
-        #             "price": product_info.price_rrc,
-        #             "quantity": item.quantity,
-        #         }
-        #     )
-        # return serialized_items
         order_items = OrderItem.objects.filter(order=obj)
 
         # Создаем словарь для хранения уникальных пар product_id и shop_id
         unique_pairs = {}
         for item in order_items:
-            unique_pairs[(item.product_id,
-                          item.shop_id)] = None  # Используем None в качестве значения, которое мы затем заменим на ProductInfo
+            unique_pairs[
+                (item.product_id, item.shop_id)
+            ] = None  # Используем None в качестве значения, которое мы затем заменим на ProductInfo
 
         # Создаем список Q-объектов для фильтрации ProductInfo
         q_objects = Q()
-        for (product_id, shop_id) in unique_pairs.keys():
+        for product_id, shop_id in unique_pairs.keys():
             q_objects |= Q(product_id=product_id, shop_id=shop_id)
 
-        # Получаем ProductInfo в том же порядке, что и order_items
         product_info_objs = list(ProductInfo.objects.filter(q_objects))
 
         # Теперь заполняем словарь unique_pairs сами объектами ProductInfo
         for product_info in product_info_objs:
             unique_pairs[(product_info.product_id, product_info.shop_id)] = product_info
 
-        # Теперь unique_pairs содержит соответствующие ProductInfo для каждой пары product_id и shop_id в order_items
-        # Мы можем использовать этот словарь для построения результата, сохраняя порядок order_items
-
+        # Теперь заполняем список serialized_items
         serialized_items = []
         for item in order_items:
             product_info = unique_pairs[(item.product_id, item.shop_id)]
-            serialized_items.append({
-
-                'name': product_info.product.name,
-
-                'price': product_info.price_rrc,
-                'quantity': item.quantity,
-            })
+            serialized_items.append(
+                {
+                    "name": product_info.product.name,
+                    "price": product_info.price_rrc,
+                    "quantity": item.quantity,
+                }
+            )
 
         return serialized_items
