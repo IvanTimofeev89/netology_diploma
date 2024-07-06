@@ -78,16 +78,16 @@ def product_shop_validator(json_data):
     return product_validator(json_data)
 
 
-def shop_category_exist(shop_id, category_id):
+def shop_category_validator(shop_id, category_id):
     from .models import Category, Shop
 
     # Check if shop exists
     if not Shop.objects.filter(id=shop_id).exists():
-        raise ValidationError({"error": f"Shop with id {shop_id} does not exist"})
+        raise ValidationError(f"Shop with id {shop_id} does not exist")
 
     # Check if category exists
     if not Category.objects.filter(external_id=category_id).exists():
-        raise ValidationError({"error": f"Category with id {category_id} does not exist"})
+        raise ValidationError(f"Category with id {category_id} does not exist")
 
     # Get the actual objects
     shop = Shop.objects.get(id=shop_id)

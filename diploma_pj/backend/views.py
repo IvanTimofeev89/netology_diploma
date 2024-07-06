@@ -41,7 +41,7 @@ from .serializers import (
 from .validators import (
     json_validator,
     product_shop_validator,
-    shop_category_exist,
+    shop_category_validator,
     shop_state_validator,
 )
 
@@ -282,13 +282,11 @@ class ProductsList(APIView):
         category_id = request.query_params.get("category_id")
 
         if shop_id and category_id:
-            shop, category = shop_category_exist(shop_id, category_id)
-
             try:
+                shop, category = shop_category_validator(shop_id, category_id)
                 shop_state_validator([shop.id])
             except DRFValidationError as e:
                 raise DRFValidationError({"error": e.args[0]})
-            shop_state_validator([shop.id])
 
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
