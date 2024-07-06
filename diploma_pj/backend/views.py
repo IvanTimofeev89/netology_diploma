@@ -269,7 +269,7 @@ class ManageOrder(APIView):
             basket = basket_exists_validator(request.user)
         except DRFValidationError as e:
             raise DRFValidationError({"error": e.args[0]})
-        basket.status = "confirmed"
+        basket.status = "placed"
         basket.save()
         return Response(
             {"message": "Order created successfully", "order_id": basket.id},

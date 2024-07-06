@@ -16,6 +16,7 @@ STATUS_CHOICES = (
     ("new", "New"),
     ("confirmed", "Confirmed"),
     ("assembled", "Assembled"),
+    ("placed", "Placed"),
     ("sent", "Sent"),
     ("delivered", "Delivered"),
     ("canceled", "Canceled"),
