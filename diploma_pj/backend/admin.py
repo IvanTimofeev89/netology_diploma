@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Shop, User
+from .models import Shop, User, Order
 
 
 @admin.register(User)
@@ -29,3 +29,9 @@ class CustomUserAdmin(UserAdmin):
 class ShopAdmin(admin.ModelAdmin):
     model = Shop
     list_display = ("name", "url")
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    model = Order
+    list_display = ("date", "status", "user")

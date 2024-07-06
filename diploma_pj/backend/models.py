@@ -240,6 +240,8 @@ class Order(models.Model):
         verbose_name_plural = "List of orders"
         ordering = ("-date",)
 
+    def __str__(self):
+        return f"Order №{self.id} - {self.user} - {self.date}"
 
 class OrderItem(models.Model):
     """

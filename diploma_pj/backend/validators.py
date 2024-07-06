@@ -43,7 +43,7 @@ def product_availability_validator(json_data):
         missing_shops_list = ", ".join(map(str, missing_shops))
         raise ValidationError(f"Shops with ids {missing_shops_list} do not exist")
 
-    # Checking if shop state is OFF
+    # Checking if any of the shops has the OFF status
     off_shops_id = set([shop[0] for shop in existing_shops if shop[1] == "off"])
     if off_shops_id:
         if len(off_shops_id) == 1:
@@ -51,7 +51,7 @@ def product_availability_validator(json_data):
         off_shops_list = ", ".join(map(str, off_shops_id))
         raise ValidationError(f"Shops with ids {off_shops_list} are OFF")
 
-    # Checking of products availability and it's amount
+    # Products availability checking for each shop and it's amount
     query = Q()
     for shop_id, product_id in product_ids:
         query |= Q(shop=shop_id, id=product_id)
