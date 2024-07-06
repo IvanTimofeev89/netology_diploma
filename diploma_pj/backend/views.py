@@ -38,11 +38,7 @@ from .serializers import (
     ShopSerializer,
     UserSerializer,
 )
-from .validators import (
-    json_validator,
-    product_availability_validator,
-    shop_category_exist,
-)
+from .validators import json_validator, product_shop_validator, shop_category_exist
 
 
 class RegisterUser(APIView):
@@ -313,7 +309,7 @@ class ManageBasket(APIView):
 
         if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
             try:
-                products_list = product_availability_validator(data)
+                products_list = product_shop_validator(data)
             except DRFValidationError as e:
                 raise DRFValidationError({"error": e.args[0]})
             order, _ = Order.objects.get_or_create(user=request.user, status="basket")

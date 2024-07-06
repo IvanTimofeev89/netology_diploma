@@ -27,11 +27,10 @@ def json_validator(obj):
     return json_data
 
 
-def product_availability_validator(json_data):
-    from .models import ProductInfo, Shop
+def shop_validator(json_data):
+    from .models import Shop
 
     shop_ids = {elem["shop"] for elem in json_data}
-    product_ids = {(elem["shop"], elem["product_info"]) for elem in json_data}
 
     # Checking if all requested shops exist
     existing_shops = Shop.objects.filter(id__in=shop_ids).values_list("id", "state")
@@ -51,7 +50,13 @@ def product_availability_validator(json_data):
         off_shops_list = ", ".join(map(str, off_shops_id))
         raise ValidationError(f"Shops with ids {off_shops_list} are OFF")
 
-    # Products availability checking for each shop and it's amount
+
+def product_validator(json_data):
+    from .models import ProductInfo
+
+    product_ids = {(elem["shop"], elem["product_info"]) for elem in json_data}
+
+    # Products availability checking for each shop and its amount
     query = Q()
     for shop_id, product_id in product_ids:
         query |= Q(shop=shop_id, id=product_id)
@@ -76,6 +81,12 @@ def product_availability_validator(json_data):
 
     # Return list of products with index
     return [product for index, product in valid_products_list]
+
+
+def product_shop_validator(json_data):
+    shop_validator(json_data)
+    valid_products = product_validator(json_data)
+    return valid_products
 
 
 def shop_category_exist(shop_id, category_id):
