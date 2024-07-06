@@ -38,7 +38,7 @@ def shop_state_validator(shop_ids):
         raise ValidationError(f"{off_shops_names} shops are OFF")
 
 
-def product_validator(json_data):
+def product_exist_validator(json_data):
     from .models import ProductInfo
 
     product_ids = {elem["product_info"] for elem in json_data}
@@ -48,7 +48,6 @@ def product_validator(json_data):
 
     # A dict for fast search of product by product_info
     product_dict = {product.id: product for product in products}
-    shop_ids = {product.shop_id for product in products}
 
     valid_products_dict = {}
     missing_product_ids = []
@@ -56,8 +55,6 @@ def product_validator(json_data):
         product = product_dict.get(elem["product_info"])
         if not product:
             missing_product_ids.append(elem["product_info"])
-        elif product.quantity < elem["quantity"]:
-            raise ValidationError(f"Not enough product with id {elem['product_info']} in stock")
         else:
             valid_products_dict[index] = product
 
@@ -67,15 +64,37 @@ def product_validator(json_data):
         missing_products_list = ", ".join(map(str, missing_product_ids))
         raise ValidationError(f"Products with ids {missing_products_list} do not exist")
 
-    # Validate shops
-    shop_state_validator(shop_ids)
+    return valid_products_dict
 
-    # Return dict of products with index
+
+def product_quantity_validator(valid_products_dict, json_data):
+    missing_products = []
+
+    for index, elem in enumerate(json_data):
+        product = valid_products_dict.get(index)
+        if product and product.quantity < elem["quantity"]:
+            missing_products.append(elem["product_info"])
+
+    if missing_products:
+        if len(missing_products) == 1:
+            raise ValidationError(f"Not enough product with id {missing_products[0]} in stock")
+        missing_products_list = ", ".join(map(str, missing_products))
+        raise ValidationError(f"Not enough products with ids {missing_products_list} in stock")
+
     return valid_products_dict
 
 
 def product_shop_validator(json_data):
-    return product_validator(json_data)
+    valid_products_dict = product_exist_validator(json_data)
+    valid_products_dict = product_quantity_validator(valid_products_dict, json_data)
+
+    # Extract shop_ids for shop state validation
+    shop_ids = {product.shop_id for product in valid_products_dict.values()}
+
+    # Validate shop states
+    shop_state_validator(shop_ids)
+
+    return valid_products_dict
 
 
 def shop_category_validator(shop_id, category_id):

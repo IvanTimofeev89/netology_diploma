@@ -343,38 +343,6 @@ class ManageBasket(APIView):
             {"message": "Following parameters are required: product_info, quantity"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-        # items = request.data.get("items")
-        # data = json_validator(items)
-        #
-        # if isinstance(data, Response):
-        #     return data
-        #
-        # if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
-        #     try:
-        #         products_list = product_shop_validator(data)
-        #     except DRFValidationError as e:
-        #         raise DRFValidationError({"error": e.args[0]})
-        #     order, _ = Order.objects.get_or_create(user=request.user, status="basket")
-        #     for id_, elem in enumerate(data):
-        #         OrderItem.objects.create(
-        #             order=order,
-        #             product=products_list[id_].product,
-        #             quantity=elem["quantity"],
-        #             shop=products_list[id_].shop,
-        #         )
-        #     if len(products_list) == 1:
-        #         return Response(
-        #             {"message": "Product has been successfully added to basket"},
-        #             status=status.HTTP_201_CREATED,
-        #         )
-        #     return Response(
-        #         {"message": "Products have been successfully added to basket"},
-        #         status=status.HTTP_201_CREATED,
-        #     )
-        # return Response(
-        #     {"message": "Following parameter are required: product_info, quantity, shop"},
-        #     status=status.HTTP_400_BAD_REQUEST,
-        # )
 
     def patch(self, request, *args, **kwargs):
         pass
