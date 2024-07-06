@@ -162,3 +162,12 @@ def product_basket_quantity_validator(valid_products_dict, json_data):
         raise ValidationError(f"Not enough products with ids {missing_products_list} in stock")
 
     return valid_products_quantity_dict
+
+
+def basket_exists_validator(user):
+    from .models import Order
+
+    if not Order.objects.filter(user=user, status="basket").exists():
+        raise ValidationError("You don't have an active basket")
+    basket = Order.objects.get(user=user, status="basket")
+    return basket

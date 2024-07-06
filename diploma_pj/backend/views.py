@@ -39,6 +39,7 @@ from .serializers import (
     UserSerializer,
 )
 from .validators import (
+    basket_exists_validator,
     json_validator,
     product_basket_quantity_validator,
     product_in_basket_validator,
@@ -264,16 +265,16 @@ class ManageOrder(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        request.data.update({"user": request.user.id})
-        serializer = OrderSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(
-                {"message": "Order created successfully", "order_id": serializer.data["id"]},
-                status=status.HTTP_201_CREATED,
-            )
-        else:
-            return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            basket = basket_exists_validator(request.user)
+        except DRFValidationError as e:
+            raise DRFValidationError({"error": e.args[0]})
+        basket.status = "confirmed"
+        basket.save()
+        return Response(
+            {"message": "Order created successfully", "order_id": basket.id},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ProductsList(APIView):
@@ -357,11 +358,9 @@ class ManageBasket(APIView):
 
         if all([{"id", "quantity"}.issubset(elem.keys()) for elem in json_data]):
             try:
-                basket = Order.objects.get(user=request.user, status="basket")
-            except Order.DoesNotExist:
-                return Response(
-                    {"error": "You don't have an active basket"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                basket = basket_exists_validator(request.user)
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
 
             try:
                 index_list = [elem["id"] for elem in json_data]
