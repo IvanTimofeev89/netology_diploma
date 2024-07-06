@@ -310,19 +310,20 @@ class ManageBasket(APIView):
 
     def post(self, request):
         items = request.data.get("items")
-        data = json_validator(items)
 
-        if isinstance(data, Response):
-            return data
+        try:
+            json_data = json_validator(items)
+        except DRFValidationError as e:
+            raise DRFValidationError({"error": e.args[0]})
 
-        if all([{"product_info", "quantity"}.issubset(elem.keys()) for elem in data]):
+        if all([{"product_info", "quantity"}.issubset(elem.keys()) for elem in json_data]):
             try:
-                products_dict = product_shop_validator(data)
+                products_dict = product_shop_validator(json_data)
             except DRFValidationError as e:
                 raise DRFValidationError({"error": e.args[0]})
             order, _ = Order.objects.get_or_create(user=request.user, status="basket")
-            for id_, elem in enumerate(data):
-                product_info = products_dict.get(id_)
+            for index, elem in enumerate(json_data):
+                product_info = products_dict.get(index)
                 if product_info:
                     OrderItem.objects.create(
                         order=order,
@@ -347,8 +348,12 @@ class ManageBasket(APIView):
     def patch(self, request, *args, **kwargs):
         pass
         # items = request.data.get("items")
-        # data = json_validator(items)
         #
+        # try:
+        #     json_data = json_validator(items)
+        # except DRFValidationError as e:
+        #     raise DRFValidationError({"error": e.args[0]})
+
         # if isinstance(data, Response):
         #     return data
         #
