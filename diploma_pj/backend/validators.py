@@ -131,8 +131,34 @@ def product_in_basket_validator(basket, index_list):
 
     if missing_product_ids:
         if len(missing_product_ids) == 1:
-            raise ValidationError(f"Product with id {missing_product_ids[0]} is nont in the basket")
+            raise ValidationError(f"Product with id {missing_product_ids[0]} is not in the basket")
         missing_products_list = ", ".join(map(str, missing_product_ids))
         raise ValidationError(f"Products with ids {missing_products_list} are not in the basket")
 
     return valid_products_dict
+
+
+def product_basket_quantity_validator(valid_products_dict, json_data):
+    from .models import ProductInfo
+
+    missing_products = []
+    valid_products_quantity_dict = {}
+
+    for index, elem in enumerate(json_data):
+        order_item = valid_products_dict.get(elem["id"])
+        if order_item:
+            product_info = ProductInfo.objects.filter(
+                product=order_item.product, shop=order_item.shop
+            ).first()
+            if product_info.quantity < elem["quantity"]:
+                missing_products.append(elem["id"])
+            else:
+                valid_products_quantity_dict[index] = order_item
+
+    if missing_products:
+        if len(missing_products) == 1:
+            raise ValidationError(f"Not enough product with id {missing_products[0]} in stock")
+        missing_products_list = ", ".join(map(str, missing_products))
+        raise ValidationError(f"Not enough products with ids {missing_products_list} in stock")
+
+    return valid_products_quantity_dict

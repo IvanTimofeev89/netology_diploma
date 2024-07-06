@@ -40,6 +40,7 @@ from .serializers import (
 )
 from .validators import (
     json_validator,
+    product_basket_quantity_validator,
     product_in_basket_validator,
     product_shop_validator,
     shop_category_validator,
@@ -347,23 +348,44 @@ class ManageBasket(APIView):
         )
 
     def patch(self, request, *args, **kwargs):
-        pass
-        # items = request.data.get("items")
-        #
-        # try:
-        #     json_data = json_validator(items)
-        # except DRFValidationError as e:
-        #     raise DRFValidationError({"error": e.args[0]})
+        items = request.data.get("items")
 
-        # if isinstance(data, Response):
-        #     return data
-        #
-        # if all([({"product_info", "quantity", "shop"}.issubset(elem.keys())) for elem in data]):
-        #     try:
-        #         products_list = product_shop_validator(data)
-        #     except DRFValidationError as e:
-        #         raise DRFValidationError({"error": e.args[0]})
-        #     order = Order.objects.get(user=request.user, status="basket")
+        try:
+            json_data = json_validator(items)
+        except DRFValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if all([{"id", "quantity"}.issubset(elem.keys()) for elem in json_data]):
+            try:
+                basket = Order.objects.get(user=request.user, status="basket")
+            except Order.DoesNotExist:
+                return Response(
+                    {"error": "You don't have an active basket"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                index_list = [elem["id"] for elem in json_data]
+                valid_product_dict = product_in_basket_validator(basket, index_list)
+                valid_products_quantity_dict = product_basket_quantity_validator(
+                    valid_product_dict, json_data
+                )
+
+                for index, elem in valid_products_quantity_dict.items():
+                    order_item = valid_products_quantity_dict.get(index)
+                    order_item.quantity = json_data[index]["quantity"]
+                    order_item.save()
+
+                return Response(
+                    {"message": "Basket has been successfully updated"}, status=status.HTTP_200_OK
+                )
+
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
+
+        return Response(
+            {"message": "Following parameters are required: id, quantity"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     def delete(self, request):
         items = request.data.get("items")

@@ -145,6 +145,7 @@ class GetBasketSerializer(serializers.ModelSerializer):
             product_info = unique_pairs[(item.product_id, item.shop_id)]
             serialized_items.append(
                 {
+                    "id": item.id,
                     "name": product_info.product.name,
                     "price": product_info.price_rrc,
                     "quantity": item.quantity,
