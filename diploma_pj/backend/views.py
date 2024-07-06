@@ -38,7 +38,12 @@ from .serializers import (
     ShopSerializer,
     UserSerializer,
 )
-from .validators import json_validator, product_shop_validator, shop_category_exist
+from .validators import (
+    json_validator,
+    product_shop_validator,
+    shop_category_exist,
+    shop_state_validator,
+)
 
 
 class RegisterUser(APIView):
@@ -278,8 +283,13 @@ class ProductsList(APIView):
 
         if shop_id and category_id:
             shop, category = shop_category_exist(shop_id, category_id)
-            if shop.state == "off":
-                return Response({"message": "shop is off"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                shop_state_validator([shop.id])
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
+            shop_state_validator([shop.id])
+
             products = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()
