@@ -109,3 +109,30 @@ def shop_category_validator(shop_id, category_id):
     category = Category.objects.get(external_id=category_id)
 
     return shop, category
+
+
+def product_in_basket_validator(basket, index_list):
+    from .models import OrderItem
+
+    products = OrderItem.objects.filter(id__in=index_list, order=basket)
+
+    # A dict for fast search of product by product_info
+    product_dict = {product.id: product for product in products}
+
+    valid_products_dict = {}
+    missing_product_ids = []
+
+    for index in index_list:
+        product = product_dict.get(index)
+        if not product:
+            missing_product_ids.append(index)
+        else:
+            valid_products_dict[index] = product
+
+    if missing_product_ids:
+        if len(missing_product_ids) == 1:
+            raise ValidationError(f"Product with id {missing_product_ids[0]} is nont in the basket")
+        missing_products_list = ", ".join(map(str, missing_product_ids))
+        raise ValidationError(f"Products with ids {missing_products_list} are not in the basket")
+
+    return valid_products_dict

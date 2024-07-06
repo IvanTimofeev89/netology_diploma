@@ -90,7 +90,7 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductInfo
-        fields = ("quantity", "price_rrc", "shop")
+        fields = ("id", "quantity", "price_rrc", "shop")
 
     def get_shop(self, obj):
         shop = Shop.objects.get(id=obj.shop_id)

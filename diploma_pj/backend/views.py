@@ -40,6 +40,7 @@ from .serializers import (
 )
 from .validators import (
     json_validator,
+    product_in_basket_validator,
     product_shop_validator,
     shop_category_validator,
     shop_state_validator,
@@ -364,8 +365,40 @@ class ManageBasket(APIView):
         #         raise DRFValidationError({"error": e.args[0]})
         #     order = Order.objects.get(user=request.user, status="basket")
 
-    def delete(self, request, *args, **kwargs):
-        pass
+    def delete(self, request):
+        items = request.data.get("items")
+        try:
+            index_list = list(map(int, items.split(",")))
+        except ValueError:
+            return Response(
+                {"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            basket = Order.objects.get(user=request.user, status="basket")
+        except Order.DoesNotExist:
+            return Response(
+                {"error": "You don't have active basket"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            valid_product_dict = product_in_basket_validator(basket, index_list)
+        except DRFValidationError as e:
+            raise DRFValidationError({"error": e.args[0]})
+
+        indexes_to_delete = list(valid_product_dict.keys())
+
+        order_items_to_delete = OrderItem.objects.filter(id__in=indexes_to_delete)
+
+        order_items_to_delete.delete()
+
+        if len(valid_product_dict) == 1:
+            return Response(
+                {"message": "Product has been successfully deleted from basket"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        return Response(
+            {"message": "Products have been successfully deleted from basket"},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 class ShopList(ListAPIView):
