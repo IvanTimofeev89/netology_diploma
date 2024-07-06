@@ -27,44 +27,29 @@ def json_validator(obj):
     return json_data
 
 
-# def product_availability_validator(json_data):
-#     from .models import ProductInfo, Shop
-#
-#     valid_products_list = []
-#     for elem in json_data:
-#         try:
-#             Shop.objects.get(id=elem["shop"])
-#             product = ProductInfo.objects.get(shop=elem["shop"], id=elem["product_info"])
-#         except Shop.DoesNotExist:
-#             raise ValidationError({"error": f"Shop with id {elem['shop']} does not exist"})
-#         except ProductInfo.DoesNotExist:
-#             raise ValidationError(
-#                 {"error": f"Product with id {elem['product_info']} does not exist"}
-#             )
-#         if product.quantity < elem["quantity"]:
-#             raise ValidationError(
-#                 {"error": f"Not enough product with id {elem['product_info']} in stock"}
-#             )
-#         valid_products_list.append(product)
-#     return valid_products_list
-
-
 def product_availability_validator(json_data):
     from .models import ProductInfo, Shop
 
     shop_ids = {elem["shop"] for elem in json_data}
     product_ids = {(elem["shop"], elem["product_info"]) for elem in json_data}
 
-    # Checking is shop exist
+    # Checking if all requested shops exist
     existing_shops = Shop.objects.filter(id__in=shop_ids).values_list("id", "state")
-    if not all([elem[1] == "on" for elem in existing_shops]):
-        raise ValidationError("All shops must be ON")
+
     missing_shops = shop_ids - set([elem[0] for elem in existing_shops])
     if missing_shops:
         if len(missing_shops) == 1:
             raise ValidationError(f"Shop with id {list(missing_shops)[0]} does not exist")
         missing_shops_list = ", ".join(map(str, missing_shops))
         raise ValidationError(f"Shops with ids {missing_shops_list} do not exist")
+
+    # Checking if shop state is OFF
+    off_shops_id = set([shop[0] for shop in existing_shops if shop[1] == "off"])
+    if off_shops_id:
+        if len(off_shops_id) == 1:
+            raise ValidationError(f"Shop with id {list(off_shops_id)[0]} is OFF")
+        off_shops_list = ", ".join(map(str, off_shops_id))
+        raise ValidationError(f"Shops with ids {off_shops_list} are OFF")
 
     # Checking of products availability and it's amount
     query = Q()

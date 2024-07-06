@@ -324,7 +324,15 @@ class ManageBasket(APIView):
                     quantity=elem["quantity"],
                     shop=products_list[id_].shop,
                 )
-            return Response({"message": "Basket created successfully"})
+            if len(products_list) == 1:
+                return Response(
+                    {"message": "Product has been successfully added to basket"},
+                    status=status.HTTP_201_CREATED,
+                )
+            return Response(
+                {"message": "Products have been successfully added to basket"},
+                status=status.HTTP_201_CREATED,
+            )
         return Response(
             {"message": "Following parameter are required: product_info, quantity, shop"},
             status=status.HTTP_400_BAD_REQUEST,
