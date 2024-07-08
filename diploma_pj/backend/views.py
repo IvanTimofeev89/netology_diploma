@@ -3,7 +3,6 @@ import yaml
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -41,6 +40,7 @@ from .serializers import (
 from .validators import (
     ProductValidators,
     basket_exists_validator,
+    contact_exists_validator,
     json_validator,
     shop_category_validator,
     shop_state_validator,
@@ -88,8 +88,12 @@ class ManageContact(APIView):
     permission_classes = [EmailOrTokenPermission]
 
     def get(self, request):
-        user_contact = Contact.objects.get(user=request.user)
-        serializer = ContactSerializer(user_contact)
+        if not Contact.objects.filter(user=request.user).exists():
+            return Response(
+                {"error": "You don't have any contacts"}, status=status.HTTP_404_NOT_FOUND
+            )
+        user_contact = Contact.objects.filter(user=request.user)
+        serializer = ContactSerializer(user_contact, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -105,19 +109,64 @@ class ManageContact(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
-        contact = get_object_or_404(Contact, user=request.user)
-        serializer = ContactSerializer(contact, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response({"message": "Contact updated successfully"}, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        contact_id = request.data.get("id")
+        if contact_id:
+            try:
+                contact_id = int(contact_id)
+            except ValueError:
+                return Response(
+                    {"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                contact_dict = contact_exists_validator(request.user, [contact_id])
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
+
+            contact = contact_dict.get(contact_id)
+            serializer = ContactSerializer(contact, data=request.data, partial=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(
+                    {"message": "Contact updated successfully"}, status=status.HTTP_200_OK
+                )
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "You must provide contact ID"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     def delete(self, request):
-        contact = get_object_or_404(Contact, user=request.user)
-        contact.delete()
+        items = request.data.get("items")
+        if items:
+            try:
+                contact_ids_list = list(map(int, items.split(",")))
+            except ValueError:
+                return Response(
+                    {"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                contacts_ids_list = contact_exists_validator(request.user, contact_ids_list)
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
+
+            indexes_to_delete = list(contacts_ids_list.keys())
+
+            with transaction.atomic():
+                contacts = Contact.objects.filter(user=request.user, id__in=indexes_to_delete)
+                contacts.delete()
+
+            if len(contact_ids_list) == 1:
+                return Response(
+                    {"message": "Contact deleted successfully"}, status=status.HTTP_204_NO_CONTENT
+                )
+            return Response(
+                {"message": "Contacts deleted successfully"}, status=status.HTTP_204_NO_CONTENT
+            )
+
         return Response(
-            {"message": "Contacts deleted successfully"}, status=status.HTTP_204_NO_CONTENT
+            {"error": "You must provide ID of contacts"}, status=status.HTTP_400_BAD_REQUEST
         )
 
 

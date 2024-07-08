@@ -2,7 +2,7 @@ import json
 
 from rest_framework.exceptions import ValidationError
 
-from .models import Category, Order, OrderItem, ProductInfo, Shop
+from .models import Category, Contact, Order, OrderItem, ProductInfo, Shop
 
 
 def json_validator(obj):
@@ -44,6 +44,38 @@ def basket_exists_validator(user):
         raise ValidationError("You don't have an active basket")
     basket = Order.objects.get(user=user, status="basket")
     return basket
+
+
+def contact_exists_validator(user, contact_ids):
+    if not Contact.objects.filter(user=user).exists():
+        raise ValidationError("You don't have any contacts")
+
+    contacts = Contact.objects.filter(user=user, id__in=contact_ids)
+
+    contacts_dict = {contact.id: contact for contact in contacts}
+
+    valid_contact_dict = {}
+    missing_contact_ids = []
+
+    for index in contact_ids:
+        contact = contacts_dict.get(index)
+        if not contact:
+            missing_contact_ids.append(index)
+        else:
+            valid_contact_dict[index] = contact
+
+    if missing_contact_ids:
+        match len(missing_contact_ids):
+            case 1:
+                raise ValidationError(
+                    f"Contact with id {missing_contact_ids[0]} does not exist for this user"
+                )
+            case _:
+                missing_products_list = ", ".join(map(str, missing_contact_ids))
+                raise ValidationError(
+                    f"Contacts with ids {missing_products_list} do not exist for this user"
+                )
+    return valid_contact_dict
 
 
 class ProductValidators:
@@ -107,7 +139,7 @@ class ProductValidators:
                         raise ValidationError(
                             f"Product with id {missing_product_ids[0]} does not exist"
                         )
-                    case "PATCH":
+                    case _:
                         missing_products_list = ", ".join(map(str, missing_product_ids))
                         raise ValidationError(
                             f"Products with ids {missing_products_list} do not exist"

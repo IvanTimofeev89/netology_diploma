@@ -276,6 +276,9 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = "Ordered item"
         verbose_name_plural = "List of ordered items"
+        constraints = [
+            models.UniqueConstraint(fields=["order_id", "product_info"], name="unique_order_item"),
+        ]
 
 
 class Contact(models.Model):
@@ -283,7 +286,7 @@ class Contact(models.Model):
     Model representing a contact.
     """
 
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="User", related_name="contacts"
     )
     phone = models.CharField(
@@ -292,8 +295,6 @@ class Contact(models.Model):
         validators=[
             phone_validator,
         ],
-        unique=True,
-        blank=True,
     )
     city = models.CharField(
         max_length=100,
