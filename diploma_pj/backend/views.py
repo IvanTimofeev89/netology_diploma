@@ -42,7 +42,6 @@ from .validators import (
     ProductValidators,
     basket_exists_validator,
     json_validator,
-    product_in_basket_validator,
     shop_category_validator,
     shop_state_validator,
 )
@@ -325,7 +324,7 @@ class ManageBasket(APIView):
 
         if all([{"product_info", "quantity"}.issubset(elem.keys()) for elem in json_data]):
             try:
-                product = ProductValidators(request.method, json_data)
+                product = ProductValidators(request_method=request.method, json_data=json_data)
                 valid_products_dict = product.exist_validator()
                 shop_ids = {product.shop_id for product in valid_products_dict.values()}
                 shop_state_validator(shop_ids)
@@ -374,7 +373,9 @@ class ManageBasket(APIView):
                 raise DRFValidationError({"error": e.args[0]})
 
             try:
-                product = ProductValidators(request.method, json_data, basket)
+                product = ProductValidators(
+                    request_method=request.method, json_data=json_data, basket=basket
+                )
                 product.exist_validator()
                 valid_products_dict = product.quantity_validator()
 
@@ -398,30 +399,36 @@ class ManageBasket(APIView):
 
     def delete(self, request):
         items = request.data.get("items")
+
         try:
             index_list = list(map(int, items.split(",")))
         except ValueError:
             return Response(
                 {"error": "Incorrect request format"}, status=status.HTTP_400_BAD_REQUEST
             )
+
         try:
             basket = Order.objects.get(user=request.user, status="basket")
         except Order.DoesNotExist:
             return Response(
                 {"error": "You don't have active basket"}, status=status.HTTP_400_BAD_REQUEST
             )
+
         try:
-            valid_product_dict = product_in_basket_validator(basket, index_list)
+            product = ProductValidators(
+                request_method=request.method, basket=basket, index_list=index_list
+            )
+            valid_products_dict = product.exist_validator()
         except DRFValidationError as e:
             raise DRFValidationError({"error": e.args[0]})
 
-        indexes_to_delete = list(valid_product_dict.keys())
+        indexes_to_delete = list(valid_products_dict.keys())
         with transaction.atomic():
             order_items_to_delete = OrderItem.objects.filter(id__in=indexes_to_delete)
 
             order_items_to_delete.delete()
 
-        if len(valid_product_dict) == 1:
+        if len(valid_products_dict) == 1:
             return Response(
                 {"message": "Product has been successfully deleted from basket"},
                 status=status.HTTP_204_NO_CONTENT,

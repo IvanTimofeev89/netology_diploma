@@ -46,37 +46,13 @@ def basket_exists_validator(user):
     return basket
 
 
-def product_in_basket_validator(basket, index_list):
-    products = OrderItem.objects.filter(id__in=index_list, order=basket)
-
-    # A dict for fast search of product by product_info
-    product_dict = {product.id: product for product in products}
-
-    valid_products_dict = {}
-    missing_product_ids = []
-
-    for index in index_list:
-        product = product_dict.get(index)
-        if not product:
-            missing_product_ids.append(index)
-        else:
-            valid_products_dict[index] = product
-
-    if missing_product_ids:
-        if len(missing_product_ids) == 1:
-            raise ValidationError(f"Product with id {missing_product_ids[0]} is not in the basket")
-        missing_products_list = ", ".join(map(str, missing_product_ids))
-        raise ValidationError(f"Products with ids {missing_products_list} are not in the basket")
-
-    return valid_products_dict
-
-
 class ProductValidators:
-    def __init__(self, request_method, json_data, basket=None):
+    def __init__(self, request_method, json_data=None, basket=None, index_list=None):
         self.json_data = json_data
         self.request_method = request_method
         self.valid_products_dict = {}
         self.basket = basket
+        self.index_list = index_list
 
     @property
     def search_param(self):
@@ -91,24 +67,38 @@ class ProductValidators:
         return OrderItem.objects.filter
 
     def exist_validator(self):
-        product_ids = {elem[self.search_param] for elem in self.json_data}
+        if self.json_data:
+            product_ids = {elem[self.search_param] for elem in self.json_data}
 
         match self.request_method:
-            case "PATCH":
-                products = self.query_request(id__in=product_ids, order=self.basket)
             case "POST":
                 products = self.query_request(id__in=product_ids)
+            case "PATCH":
+                products = self.query_request(id__in=product_ids, order=self.basket)
+            case "DELETE":
+                products = self.query_request(id__in=self.index_list, order=self.basket)
 
         product_dict = {product.id: product for product in products}
 
         valid_products_dict = {}
         missing_product_ids = []
-        for index, elem in enumerate(self.json_data):
-            product = product_dict.get(elem[self.search_param])
-            if not product:
-                missing_product_ids.append(elem[self.search_param])
-            else:
-                valid_products_dict[index] = product
+
+        match self.request_method:
+            case "POST" | "PATCH":
+                for index, elem in enumerate(self.json_data):
+                    product = product_dict.get(elem[self.search_param])
+                    if not product:
+                        missing_product_ids.append(elem[self.search_param])
+                    else:
+                        valid_products_dict[index] = product
+
+            case "DELETE":
+                for index in self.index_list:
+                    product = product_dict.get(index)
+                    if not product:
+                        missing_product_ids.append(index)
+                    else:
+                        valid_products_dict[index] = product
 
         if missing_product_ids:
             if self.request_method == "POST":
@@ -117,7 +107,7 @@ class ProductValidators:
                         raise ValidationError(
                             f"Product with id {missing_product_ids[0]} does not exist"
                         )
-                    case _:
+                    case "PATCH":
                         missing_products_list = ", ".join(map(str, missing_product_ids))
                         raise ValidationError(
                             f"Products with ids {missing_products_list} do not exist"
