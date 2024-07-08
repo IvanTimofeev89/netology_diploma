@@ -260,12 +260,18 @@ class OrderItem(models.Model):
         Product,
         on_delete=models.CASCADE,
         verbose_name="Product",
-        related_name="order_items",
+        related_name="product_order_items",
     )
     shop = models.ForeignKey(
         Shop, on_delete=models.CASCADE, verbose_name="Shop", related_name="shop_items"
     )
     quantity = models.PositiveIntegerField(verbose_name="Quantity")
+    product_info = models.ForeignKey(
+        ProductInfo,
+        on_delete=models.CASCADE,
+        verbose_name="Product information",
+        related_name="prod_info_order_items",
+    )
 
     class Meta:
         verbose_name = "Ordered item"
