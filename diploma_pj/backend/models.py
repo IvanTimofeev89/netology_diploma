@@ -9,7 +9,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .validators import city_name_validator, phone_validator
+from .regex_validators import city_name_validator, phone_validator
 
 # Choices for the status of an order
 STATUS_CHOICES = (
