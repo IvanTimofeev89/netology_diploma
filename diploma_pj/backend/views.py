@@ -39,14 +39,12 @@ from .serializers import (
     UserSerializer,
 )
 from .validators import (
+    ProductValidators,
     basket_exists_validator,
     json_validator,
-    product_basket_quantity_validator,
     product_in_basket_validator,
-    product_shop_validator,
     shop_category_validator,
     shop_state_validator,
-    ProductValidators
 )
 
 
@@ -308,48 +306,15 @@ class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
     def get(self, request):
-        basket = Order.objects.filter(user=request.user, status="basket")
+        try:
+            basket_exists_validator(request.user)
+            basket = Order.objects.filter(user=request.user, status="basket")
+        except DRFValidationError as e:
+            raise DRFValidationError({"error": e.args[0]})
+
         serializer = GetBasketSerializer(basket, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # def post(self, request):
-    #     items = request.data.get("items")
-    #
-    #     try:
-    #         json_data = json_validator(items)
-    #     except DRFValidationError as e:
-    #         raise DRFValidationError({"error": e.args[0]})
-    #
-    #     if all([{"product_info", "quantity"}.issubset(elem.keys()) for elem in json_data]):
-    #         try:
-    #             products_dict = product_shop_validator(json_data)
-    #         except DRFValidationError as e:
-    #             raise DRFValidationError({"error": e.args[0]})
-    #         order, _ = Order.objects.get_or_create(user=request.user, status="basket")
-    #         for index, elem in enumerate(json_data):
-    #             product_info = products_dict.get(index)
-    #             if product_info:
-    #                 OrderItem.objects.create(
-    #                     order=order,
-    #                     product=product_info.product,
-    #                     quantity=elem["quantity"],
-    #                     shop=product_info.shop,
-    #                 )
-    #         if len(products_dict) == 1:
-    #             return Response(
-    #                 {"message": "Product has been successfully added to basket"},
-    #                 status=status.HTTP_201_CREATED,
-    #             )
-    #         return Response(
-    #             {"message": "Products have been successfully added to basket"},
-    #             status=status.HTTP_201_CREATED,
-    #         )
-    #     return Response(
-    #         {"message": "Following parameters are required: product_info, quantity"},
-    #         status=status.HTTP_400_BAD_REQUEST,
-    #     )
-
-##################################################################################
     def post(self, request):
         items = request.data.get("items")
 
@@ -361,22 +326,25 @@ class ManageBasket(APIView):
         if all([{"product_info", "quantity"}.issubset(elem.keys()) for elem in json_data]):
             try:
                 product = ProductValidators(request.method, json_data)
-                product.exist_validator()
+                valid_products_dict = product.exist_validator()
+                shop_ids = {product.shop_id for product in valid_products_dict.values()}
+                shop_state_validator(shop_ids)
                 valid_products_dict = product.quantity_validator()
 
             except DRFValidationError as e:
                 raise DRFValidationError({"error": e.args[0]})
-            order, _ = Order.objects.get_or_create(user=request.user, status="basket")
-            for index, elem in enumerate(json_data):
-                product_info_obj = valid_products_dict.get(index)
+            with transaction.atomic():
+                order, _ = Order.objects.get_or_create(user=request.user, status="basket")
+                for index, elem in enumerate(json_data):
+                    product_info_obj = valid_products_dict.get(index)
 
-                OrderItem.objects.create(
-                    order=order,
-                    product=product_info_obj.product,
-                    quantity=elem["quantity"],
-                    shop=product_info_obj.shop,
-                    product_info=product_info_obj
-                )
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product_info_obj.product,
+                        quantity=elem["quantity"],
+                        shop=product_info_obj.shop,
+                        product_info=product_info_obj,
+                    )
             if len(valid_products_dict) == 1:
                 return Response(
                     {"message": "Product has been successfully added to basket"},
@@ -390,8 +358,6 @@ class ManageBasket(APIView):
             {"message": "Following parameters are required: product_info, quantity"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
-##################################################################################
 
     def patch(self, request, *args, **kwargs):
         items = request.data.get("items")
@@ -408,16 +374,15 @@ class ManageBasket(APIView):
                 raise DRFValidationError({"error": e.args[0]})
 
             try:
-                index_list = [elem["id"] for elem in json_data]
-                valid_product_dict = product_in_basket_validator(basket, index_list)
-                valid_products_quantity_dict = product_basket_quantity_validator(
-                    valid_product_dict, json_data
-                )
+                product = ProductValidators(request.method, json_data, basket)
+                product.exist_validator()
+                valid_products_dict = product.quantity_validator()
 
-                for index, elem in valid_products_quantity_dict.items():
-                    order_item = valid_products_quantity_dict.get(index)
-                    order_item.quantity = json_data[index]["quantity"]
-                    order_item.save()
+                with transaction.atomic():
+                    for index, elem in enumerate(json_data):
+                        order_item = valid_products_dict.get(index)
+                        order_item.quantity = elem["quantity"]
+                        order_item.save()
 
                 return Response(
                     {"message": "Basket has been successfully updated"}, status=status.HTTP_200_OK
@@ -451,10 +416,10 @@ class ManageBasket(APIView):
             raise DRFValidationError({"error": e.args[0]})
 
         indexes_to_delete = list(valid_product_dict.keys())
+        with transaction.atomic():
+            order_items_to_delete = OrderItem.objects.filter(id__in=indexes_to_delete)
 
-        order_items_to_delete = OrderItem.objects.filter(id__in=indexes_to_delete)
-
-        order_items_to_delete.delete()
+            order_items_to_delete.delete()
 
         if len(valid_product_dict) == 1:
             return Response(
