@@ -6,15 +6,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0002_alter_contact_phone_orderitem_unique_order_item'),
+        ("backend", "0002_alter_contact_phone_orderitem_unique_order_item"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contact',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contacts', to=settings.AUTH_USER_MODEL, verbose_name='User'),
+            model_name="contact",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="contacts",
+                to=settings.AUTH_USER_MODEL,
+                verbose_name="User",
+            ),
         ),
     ]

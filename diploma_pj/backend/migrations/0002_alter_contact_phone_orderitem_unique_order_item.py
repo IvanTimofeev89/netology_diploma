@@ -5,19 +5,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0001_initial'),
+        ("backend", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='contact',
-            name='phone',
-            field=models.CharField(max_length=20, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')], verbose_name='Phone'),
+            model_name="contact",
+            name="phone",
+            field=models.CharField(
+                max_length=20,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        message="Phone number must be entered in the format: "
+                        "'+999999999'. Up to 15 digits allowed.",
+                        regex="^\\+?1?\\d{9,15}$",
+                    )
+                ],
+                verbose_name="Phone",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='orderitem',
-            constraint=models.UniqueConstraint(fields=('order_id', 'product_info'), name='unique_order_item'),
+            model_name="orderitem",
+            constraint=models.UniqueConstraint(
+                fields=("order_id", "product_info"), name="unique_order_item"
+            ),
         ),
     ]

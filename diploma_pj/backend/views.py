@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from .models import (
     Category,
+    ConfirmEmailToken,
     Contact,
     Order,
     OrderItem,
@@ -78,6 +79,28 @@ class Login(APIView):
         user = request.user
         token, created = Token.objects.get_or_create(user=user)
         return Response({"token": token.key}, status=status.HTTP_201_CREATED)
+
+
+class EmailConfirm(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+        email = request.data.get("email")
+        if token and email:
+            if not ConfirmEmailToken.objects.filter(key=token).exists():
+                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+            key = ConfirmEmailToken.objects.filter(key=token, user__email=email).first()
+            if not key:
+                return Response({"error": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
+            key.user.is_email_confirmed = True
+            key.user.save()
+            key.delete()
+            return Response({"message": "Email confirmed successfully"}, status=status.HTTP_200_OK)
+        return Response(
+            {"error": "Token and email are required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class ManageContact(APIView):

@@ -8,6 +8,7 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django_rest_passwordreset.tokens import get_token_generator
 
 from .regex_validators import city_name_validator, phone_validator
 
@@ -84,7 +85,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     middle_name = models.CharField(max_length=30, blank=True)
     company = models.CharField(max_length=100, blank=True)
     position = models.CharField(max_length=100, blank=True)
-    is_active = models.BooleanField(default=True)
+    is_email_confirmed = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -313,3 +314,27 @@ class Contact(models.Model):
     class Meta:
         verbose_name = "Contact"
         verbose_name_plural = "List of contacts"
+
+
+class ConfirmEmailToken(models.Model):
+    """
+    Model representing a confirmation email token.
+    """
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="User", related_name="confirm_email_tokens"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    key = models.CharField(
+        max_length=64, unique=True, db_index=True, verbose_name="Token for email confirmation"
+    )
+
+    class Meta:
+        verbose_name = "Confirmation email token"
+        verbose_name_plural = "List of confirmation email tokens"
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            token_generator = get_token_generator()
+            self.key = token_generator.generate_token()
+        super().save(*args, **kwargs)
