@@ -4,19 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0004_confirmemailtoken'),
+        ("backend", "0004_confirmemailtoken"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='confirmemailtoken',
-            name='is_active',
+            model_name="confirmemailtoken",
+            name="is_active",
         ),
         migrations.AlterField(
-            model_name='user',
-            name='is_active',
+            model_name="user",
+            name="is_active",
             field=models.BooleanField(default=False),
         ),
     ]

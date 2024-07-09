@@ -4,15 +4,14 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0005_remove_confirmemailtoken_is_active_and_more'),
+        ("backend", "0005_remove_confirmemailtoken_is_active_and_more"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='user',
-            old_name='is_active',
-            new_name='is_email_confirmed',
+            model_name="user",
+            old_name="is_active",
+            new_name="is_email_confirmed",
         ),
     ]

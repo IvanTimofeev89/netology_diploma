@@ -6,24 +6,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('backend', '0003_alter_contact_user'),
+        ("backend", "0003_alter_contact_user"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConfirmEmailToken',
+            name="ConfirmEmailToken",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('key', models.CharField(db_index=True, max_length=64, unique=True, verbose_name='Token for email confirmation')),
-                ('is_active', models.BooleanField(default=False)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='confirm_email_tokens', to=settings.AUTH_USER_MODEL, verbose_name='User')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "key",
+                    models.CharField(
+                        db_index=True,
+                        max_length=64,
+                        unique=True,
+                        verbose_name="Token for email confirmation",
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=False)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="confirm_email_tokens",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="User",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Confirmation email token',
-                'verbose_name_plural': 'List of confirmation email tokens',
+                "verbose_name": "Confirmation email token",
+                "verbose_name_plural": "List of confirmation email tokens",
             },
         ),
     ]
