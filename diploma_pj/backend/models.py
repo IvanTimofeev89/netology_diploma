@@ -245,6 +245,15 @@ class Order(models.Model):
     def __str__(self):
         return f"Order №{self.id} - {self.user} - {self.date}"
 
+    def save(self, *args, **kwargs):
+        from .signals import order_status_changed
+
+        if self.status != "basket":
+            data = {"id": self.id, "status": self.status}
+
+            order_status_changed.send(sender=self.__class__, user_id=self.user_id, data=data)
+        super().save(*args, **kwargs)
+
 
 class OrderItem(models.Model):
     """
