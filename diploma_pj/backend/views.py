@@ -3,10 +3,13 @@ import yaml
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -520,9 +523,21 @@ class ShopList(ListAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
     permission_classes = [AllowAny]
+    pagination_class = PageNumberPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["name", "state"]
+    search_fields = ["name", "state"]
+    ordering_fields = ["name", "state"]
+    ordering = ["name"]
 
 
 class CategoryList(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
+    pagination_class = PageNumberPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["id", "external_id", "name"]
+    search_fields = ["id", "external_id", "name"]
+    ordering_fields = ["id", "external_id", "name"]
+    ordering = ["id"]

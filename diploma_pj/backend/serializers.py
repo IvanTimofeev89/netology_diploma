@@ -1,6 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from rest_framework import serializers
 
 from .models import (
@@ -112,44 +111,34 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class GetBasketSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
+    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ("id", "date", "status", "info")
+        fields = ("id", "date", "status", "total", "info")
         read_only_fields = ("id",)
 
     def get_info(self, obj):
-        order_items = OrderItem.objects.filter(order=obj)
+        if not hasattr(self, "_order_items"):
+            self._order_items = OrderItem.objects.filter(order=obj).select_related(
+                "product", "product_info"
+            )
 
-        # Создаем словарь для хранения уникальных пар product_id и shop_id
-        unique_pairs = {}
-        for item in order_items:
-            unique_pairs[
-                (item.product_id, item.shop_id)
-            ] = None  # Используем None в качестве значения, которое мы затем заменим на ProductInfo
-
-        # Создаем список Q-объектов для фильтрации ProductInfo
-        q_objects = Q()
-        for product_id, shop_id in unique_pairs.keys():
-            q_objects |= Q(product_id=product_id, shop_id=shop_id)
-
-        product_info_objs = list(ProductInfo.objects.filter(q_objects))
-
-        # Теперь заполняем словарь unique_pairs сами объектами ProductInfo
-        for product_info in product_info_objs:
-            unique_pairs[(product_info.product_id, product_info.shop_id)] = product_info
-
-        # Теперь заполняем список serialized_items
         serialized_items = []
-        for item in order_items:
-            product_info = unique_pairs[(item.product_id, item.shop_id)]
+        for item in self._order_items:
             serialized_items.append(
                 {
-                    "id": item.id,
-                    "name": product_info.product.name,
-                    "price": product_info.price_rrc,
+                    "product_info_id": item.product_info.id,
+                    "name": item.product.name,
+                    "price": item.product_info.price_rrc,
                     "quantity": item.quantity,
                 }
             )
-
         return serialized_items
+
+    def get_total(self, obj):
+        if not hasattr(self, "_order_items"):
+            self._order_items = OrderItem.objects.filter(order=obj).select_related("product_info")
+
+        total = sum(item.quantity * item.product_info.price_rrc for item in self._order_items)
+        return total
