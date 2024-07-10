@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models.signals import post_save
@@ -10,7 +12,7 @@ order_status_changed = Signal()
 
 
 @receiver(post_save, sender=User)
-def send_email_confirmation_token(sender, instance, created, **kwargs):
+def send_email_confirmation_token(sender: Any, instance: User, created: bool, **kwargs: Any):
     if created and not instance.is_email_confirmed:
         # send an e-mail to the user
         token, _ = ConfirmEmailToken.objects.get_or_create(user_id=instance.pk)
@@ -25,7 +27,7 @@ def send_email_confirmation_token(sender, instance, created, **kwargs):
 
 
 @receiver(reset_password_token_created)
-def send_password_reset_token(sender, instance, reset_password_token, **kwargs):
+def send_password_reset_token(sender: Any, instance: Any, reset_password_token: Any, **kwargs: Any):
     send_mail(
         # title:
         f"Token for password reset for {reset_password_token.user}",
@@ -38,7 +40,7 @@ def send_password_reset_token(sender, instance, reset_password_token, **kwargs):
 
 
 @receiver(order_status_changed)
-def send_order_status_changed(user_id, **kwargs):
+def send_order_status_changed(user_id: int, **kwargs: Any):
     user = User.objects.get(id=user_id)
     message = (
         f"Status of your order with number {kwargs['data'].get('id')} has "

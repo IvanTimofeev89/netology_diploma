@@ -1,12 +1,13 @@
 import json
+from typing import Union, List, Dict, Tuple, Optional
 
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from rest_framework.exceptions import ValidationError
 
 from .models import Category, Contact, Order, OrderItem, ProductInfo, Shop, User
 
 
-def json_validator(obj: str) -> dict | list:
+def json_validator(obj: str) -> List[Dict[str, str]]:
     try:
         json_data = json.loads(obj)
     except json.JSONDecodeError:
@@ -14,7 +15,7 @@ def json_validator(obj: str) -> dict | list:
     return json_data
 
 
-def shop_state_validator(shop_ids: list[int]) -> None:
+def shop_state_validator(shop_ids: list[str]) -> None:
     # Checking if any of the shops has the OFF status
     off_shops = Shop.objects.filter(id__in=shop_ids, state="off")
     if off_shops.exists():
@@ -24,7 +25,7 @@ def shop_state_validator(shop_ids: list[int]) -> None:
         raise ValidationError(f"{off_shops_names} shops are OFF")
 
 
-def shop_category_validator(shop_id: str, category_id: str) -> (Shop, Category):
+def shop_category_validator(shop_id: str, category_id: str) -> Tuple[Shop, Category]:
     # Check if shop exists
     if not Shop.objects.filter(id=shop_id).exists():
         raise ValidationError(f"Shop with id {shop_id} does not exist")
@@ -34,8 +35,8 @@ def shop_category_validator(shop_id: str, category_id: str) -> (Shop, Category):
         raise ValidationError(f"Category with id {category_id} does not exist")
 
     # Get the actual objects
-    shop = Shop.objects.get(id=shop_id)
-    category = Category.objects.get(external_id=category_id)
+    shop: Shop = Shop.objects.get(id=shop_id)
+    category: Category = Category.objects.get(external_id=category_id)
 
     return shop, category
 
@@ -43,20 +44,20 @@ def shop_category_validator(shop_id: str, category_id: str) -> (Shop, Category):
 def basket_exists_validator(user: User) -> Order:
     if not Order.objects.filter(user=user, status="basket").exists():
         raise ValidationError("You don't have an active basket")
-    basket = Order.objects.get(user=user, status="basket")
+    basket: Order = Order.objects.get(user=user, status="basket")
     return basket
 
 
-def contact_exists_validator(user: User, contact_ids: str) -> dict[int:Contact]:
+def contact_exists_validator(user: User, contact_ids: List[int]) -> Dict[int, Contact]:
     if not Contact.objects.filter(user=user).exists():
         raise ValidationError("You don't have any contacts")
 
-    contacts = Contact.objects.filter(user=user, id__in=contact_ids)
+    contacts: QuerySet[Union[Contact, None]] = Contact.objects.filter(user=user, id__in=contact_ids)
 
-    contacts_dict = {contact.id: contact for contact in contacts}
+    contacts_dict: Dict[int, Contact] = {contact.id: contact for contact in contacts}
 
-    valid_contact_dict = {}
-    missing_contact_ids = []
+    valid_contact_dict: Dict[int, Contact] = {}
+    missing_contact_ids: List[int] = []
 
     for index in contact_ids:
         contact = contacts_dict.get(index)
@@ -84,12 +85,12 @@ class ProductValidators:
         self,
         request_method: str,
         json_data: dict | list = None,
-        basket: Order = None,
+        basket: Optional[Order] = None,
         index_list: list[int] = None,
     ):
         self.json_data = json_data
         self.request_method = request_method
-        self.valid_products_dict = {}
+        self.valid_products_dict: Dict[int, Union[ProductInfo, OrderItem]] = {}
         self.basket = basket
         self.index_list = index_list
 
@@ -105,7 +106,7 @@ class ProductValidators:
             return ProductInfo.objects.filter
         return OrderItem.objects.filter
 
-    def exist_validator(self) -> dict[int: ProductInfo | OrderItem]:
+    def exist_validator(self) -> Dict[int, Union[ProductInfo, OrderItem]]:
         if self.json_data:
             product_ids = {elem[self.search_param] for elem in self.json_data}
 
@@ -168,7 +169,7 @@ class ProductValidators:
 
         return self.valid_products_dict
 
-    def quantity_validator(self) -> dict[int: ProductInfo | OrderItem]:
+    def quantity_validator(self) -> Dict[int, Union[ProductInfo, OrderItem]]:
         missing_products = []
 
         for index, elem in enumerate(self.json_data):
@@ -191,7 +192,7 @@ class ProductValidators:
         return self.valid_products_dict
 
 
-def already_ordered_products_validator(order: Order, json_data: dict | list) -> None:
+def already_ordered_products_validator(order: Order, json_data: List[Dict[str, str]]) -> None:
     product_infos = [int(elem["product_info"]) for elem in json_data]
     query_obj = Q(order=order) & Q(product_info__in=product_infos)
     if OrderItem.objects.filter(query_obj).exists():

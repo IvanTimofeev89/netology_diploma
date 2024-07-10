@@ -37,14 +37,14 @@ SHOP_STATES = (
 )
 
 
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager['User']):
     """
     Custom manager for the User model, providing methods to create regular users and superusers.
     """
 
     use_in_migrations = True
 
-    def create_user(self, email, password, **extra_fields):
+    def create_user(self, email: str, password: str, **extra_fields) -> "User":
         """
         Create and save a User with the given email and password.
         """
@@ -56,7 +56,7 @@ class UserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, email, password, **extra_fields):
+    def create_superuser(self, email: str, password: str, **extra_fields) -> "User":
         """
         Create and save a SuperUser with the given email and password.
         """

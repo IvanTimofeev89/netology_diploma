@@ -12,6 +12,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.views import APIView
 
 from .models import (
@@ -59,7 +60,7 @@ class RegisterUser(APIView):
 
     permission_classes = [AllowAny]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
@@ -79,7 +80,7 @@ class Login(APIView):
 
     permission_classes = [EmailPasswordPermission]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         user = request.user
         token, created = Token.objects.get_or_create(user=user)
         return Response({"token": token.key}, status=status.HTTP_201_CREATED)
@@ -88,7 +89,7 @@ class Login(APIView):
 class EmailConfirm(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         token = request.data.get("token")
         email = request.data.get("email")
         if token and email:
@@ -114,7 +115,7 @@ class ManageContact(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         if not Contact.objects.filter(user=request.user).exists():
             return Response(
                 {"error": "You don't have any contacts"}, status=status.HTTP_404_NOT_FOUND
@@ -123,7 +124,7 @@ class ManageContact(APIView):
         serializer = ContactSerializer(user_contact, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         request.data._mutable = True
         request.data.update({"user": request.user.id})
         serializer = ContactSerializer(data=request.data)
@@ -135,7 +136,7 @@ class ManageContact(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def patch(self, request):
+    def patch(self, request: Request) -> Response:
         contact_id = request.data.get("id")
         if contact_id:
             try:
@@ -163,7 +164,7 @@ class ManageContact(APIView):
             {"error": "You must provide contact ID"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    def delete(self, request):
+    def delete(self, request: Request) -> Response:
         items = request.data.get("items")
         if items:
             try:
@@ -204,11 +205,11 @@ class ManageUserAccount(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def patch(self, request):
+    def patch(self, request: Request) -> Response:
         serializer = UserSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -224,7 +225,7 @@ class PartnerUpdate(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         user = request.user
 
         if user.type != "shop":
@@ -312,13 +313,13 @@ class PartnerState(APIView):
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         user = request.user
         return Response(
             {"message": f"Shop state is {user.user_shop.state.upper()}"}, status=status.HTTP_200_OK
         )
 
-    def patch(self, request):
+    def patch(self, request: Request) -> Response:
         serializer = ShopSerializer(request.user.user_shop, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -336,12 +337,12 @@ class ManageOrder(APIView):
 
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         orders = Order.objects.filter(user=request.user)
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         try:
             basket = basket_exists_validator(request.user)
         except DRFValidationError as e:
@@ -362,7 +363,7 @@ class ManageOrder(APIView):
 class ProductsList(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         shop_id = request.query_params.get("shop_id")
         category_id = request.query_params.get("category_id")
 
@@ -388,7 +389,7 @@ class ProductsList(APIView):
 class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         try:
             basket_exists_validator(request.user)
             basket = Order.objects.filter(user=request.user, status="basket")
@@ -398,7 +399,7 @@ class ManageBasket(APIView):
         serializer = GetBasketSerializer(basket, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         items = request.data.get("items")
 
         try:
@@ -449,7 +450,7 @@ class ManageBasket(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request) -> Response:
         items = request.data.get("items")
 
         try:
@@ -488,7 +489,7 @@ class ManageBasket(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    def delete(self, request):
+    def delete(self, request: Request) -> Response:
         items = request.data.get("items")
 
         try:
