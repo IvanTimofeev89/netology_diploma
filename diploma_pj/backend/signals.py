@@ -41,8 +41,8 @@ def send_password_reset_token(sender, instance, reset_password_token, **kwargs):
 def send_order_status_changed(user_id, **kwargs):
     user = User.objects.get(id=user_id)
     message = (
-        f"Your order number {kwargs['data'].get('id')} status has "
-        f"been changed to {kwargs['data'].get('status').capitalize()}"
+        f"Status of your order with number {kwargs['data'].get('id')} has "
+        f"been changed to '{kwargs['data'].get('status').capitalize()}'"
     )
 
     send_mail(

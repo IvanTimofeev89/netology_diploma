@@ -339,6 +339,11 @@ class ManageOrder(APIView):
             basket = basket_exists_validator(request.user)
         except DRFValidationError as e:
             raise DRFValidationError({"error": e.args[0]})
+        if not basket.user.is_email_confirmed:
+            return Response(
+                {"error": "Your email is not confirmed"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         basket.status = "placed"
         basket.save()
         return Response(

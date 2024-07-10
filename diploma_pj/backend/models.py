@@ -128,7 +128,7 @@ class Shop(models.Model):
 
     class Meta:
         verbose_name = "Shop"
-        verbose_name_plural = "List of shops"
+        verbose_name_plural = "Shops"
         ordering = ("-name",)
 
     def __str__(self):
@@ -146,7 +146,7 @@ class Category(models.Model):
 
     class Meta:
         verbose_name = "Category"
-        verbose_name_plural = "List of categories"
+        verbose_name_plural = "Categories"
         ordering = ("-name",)
 
 
@@ -160,7 +160,7 @@ class Product(models.Model):
 
     class Meta:
         verbose_name = "Product"
-        verbose_name_plural = "List of products"
+        verbose_name_plural = "Products"
         ordering = ("-name",)
 
 
@@ -184,7 +184,7 @@ class ProductInfo(models.Model):
 
     class Meta:
         verbose_name = "Product information"
-        verbose_name_plural = "List of products information"
+        verbose_name_plural = "Product information"
 
 
 class Parameter(models.Model):
@@ -196,7 +196,7 @@ class Parameter(models.Model):
 
     class Meta:
         verbose_name = "Parameter"
-        verbose_name_plural = "List of parameters"
+        verbose_name_plural = "Parameters"
         ordering = ("-name",)
 
 
@@ -221,7 +221,7 @@ class ProductParameter(models.Model):
 
     class Meta:
         verbose_name = "Product parameter"
-        verbose_name_plural = "List of product parameters"
+        verbose_name_plural = "Product parameters"
 
 
 class Order(models.Model):
@@ -239,7 +239,7 @@ class Order(models.Model):
 
     class Meta:
         verbose_name = "Order"
-        verbose_name_plural = "List of orders"
+        verbose_name_plural = "Orders"
         ordering = ("-date",)
 
     def __str__(self):
@@ -285,7 +285,7 @@ class OrderItem(models.Model):
 
     class Meta:
         verbose_name = "Ordered item"
-        verbose_name_plural = "List of ordered items"
+        verbose_name_plural = "Ordered items"
         constraints = [
             models.UniqueConstraint(fields=["order_id", "product_info"], name="unique_order_item"),
         ]
@@ -322,7 +322,7 @@ class Contact(models.Model):
 
     class Meta:
         verbose_name = "Contact"
-        verbose_name_plural = "List of contacts"
+        verbose_name_plural = "Contacts"
 
 
 class ConfirmEmailToken(models.Model):
@@ -340,7 +340,7 @@ class ConfirmEmailToken(models.Model):
 
     class Meta:
         verbose_name = "Confirmation email token"
-        verbose_name_plural = "List of confirmation email tokens"
+        verbose_name_plural = "Confirmation email tokens"
 
     def save(self, *args, **kwargs):
         if not self.key:
