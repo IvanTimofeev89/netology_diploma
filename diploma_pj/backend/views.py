@@ -43,6 +43,7 @@ from .serializers import (
 )
 from .validators import (
     ProductValidators,
+    already_ordered_products_validator,
     basket_exists_validator,
     contact_exists_validator,
     json_validator,
@@ -415,8 +416,15 @@ class ManageBasket(APIView):
 
             except DRFValidationError as e:
                 raise DRFValidationError({"error": e.args[0]})
+
+            order, _ = Order.objects.get_or_create(user=request.user, status="basket")
+
+            try:
+                already_ordered_products_validator(order, json_data)
+            except DRFValidationError as e:
+                raise DRFValidationError({"error": e.args[0]})
+
             with transaction.atomic():
-                order, _ = Order.objects.get_or_create(user=request.user, status="basket")
                 for index, elem in enumerate(json_data):
                     product_info_obj = valid_products_dict.get(index)
 
