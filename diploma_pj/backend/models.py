@@ -149,6 +149,9 @@ class Category(models.Model):
         verbose_name_plural = "Categories"
         ordering = ("-name",)
 
+    def __str__(self):
+        return self.name
+
 
 class Product(models.Model):
     """
@@ -162,6 +165,9 @@ class Product(models.Model):
         verbose_name = "Product"
         verbose_name_plural = "Products"
         ordering = ("-name",)
+
+    def __str__(self):
+        return self.name
 
 
 class ProductInfo(models.Model):
@@ -185,6 +191,9 @@ class ProductInfo(models.Model):
     class Meta:
         verbose_name = "Product information"
         verbose_name_plural = "Product information"
+
+    def __str__(self):
+        return ""
 
 
 class Parameter(models.Model):
@@ -243,7 +252,7 @@ class Order(models.Model):
         ordering = ("-date",)
 
     def __str__(self):
-        return f"Order №{self.id} - {self.user} - {self.date}"
+        return f"Order №{self.id} - {self.user.email} - {self.date}"
 
     def save(self, *args, **kwargs):
         from .signals import order_status_changed
@@ -289,6 +298,9 @@ class OrderItem(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["order_id", "product_info"], name="unique_order_item"),
         ]
+
+    def __str__(self):
+        return str(self.product_info.id)
 
 
 class Contact(models.Model):
