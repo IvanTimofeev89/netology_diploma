@@ -290,7 +290,10 @@ class PartnerUpdate(APIView):
                         for key, value in item.get("parameters", {}).items():
                             param_obj, _ = Parameter.objects.get_or_create(name=key)
                             ProductParameter.objects.create(
-                                product_info=prod_info_obj, parameter=param_obj, value=value
+                                product_info=prod_info_obj,
+                                parameter=param_obj,
+                                value=value,
+                                product=product,
                             )
         except Exception as error:
             return Response(

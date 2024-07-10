@@ -62,7 +62,7 @@ class UserManager(BaseUserManager):
         """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("is_email_confirmed", True)
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError(_("Superuser must have is_staff=True."))
@@ -105,7 +105,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.email}"
 
     class Meta:
         verbose_name = "User"
@@ -208,6 +208,9 @@ class Parameter(models.Model):
         verbose_name_plural = "Parameters"
         ordering = ("-name",)
 
+    def __str__(self):
+        return self.name
+
 
 class ProductParameter(models.Model):
     """
@@ -227,10 +230,16 @@ class ProductParameter(models.Model):
         related_name="product_parameters",
     )
     value = models.CharField(max_length=100, verbose_name="Parameter value")
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, verbose_name="Product", related_name="product_parameters"
+    )
 
     class Meta:
         verbose_name = "Product parameter"
         verbose_name_plural = "Product parameters"
+
+    def __str__(self):
+        return ""
 
 
 class Order(models.Model):
@@ -300,7 +309,7 @@ class OrderItem(models.Model):
         ]
 
     def __str__(self):
-        return str(self.product_info.id)
+        return ""
 
 
 class Contact(models.Model):
@@ -335,6 +344,9 @@ class Contact(models.Model):
     class Meta:
         verbose_name = "Contact"
         verbose_name_plural = "Contacts"
+
+    def __str__(self):
+        return ""
 
 
 class ConfirmEmailToken(models.Model):

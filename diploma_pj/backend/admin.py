@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from nonrelated_inlines.admin import NonrelatedTabularInline
 
 from .models import (
     Category,
+    Contact,
     Order,
     OrderItem,
     Product,
@@ -12,6 +12,13 @@ from .models import (
     Shop,
     User,
 )
+
+
+class UserContactInline(admin.TabularInline):
+    model = Contact
+    extra = 0
+    fields = ("city", "street", "house", "structure", "building", "apartment", "phone")
+    readonly_fields = ("city", "street", "house", "structure", "building", "apartment", "phone")
 
 
 @admin.register(User)
@@ -39,6 +46,7 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
     filter_horizontal = ()
+    inlines = [UserContactInline]
 
 
 # class ProductParameterInline(NonrelatedTabularInline):
@@ -63,19 +71,26 @@ class ProductInfoInline(admin.TabularInline):
     readonly_fields = ("product", "shop", "quantity", "price", "price_rrc", "external_id")
 
 
+class ProductParametersInline(admin.TabularInline):
+    model = ProductParameter
+    extra = 0
+    fields = ("parameter", "value")
+    readonly_fields = ("parameter", "value")
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     model = Product
     list_display = ("name", "category")
     readonly_fields = ("name", "category")
     list_filter = ("category",)
-    search_fields = ("name", "category__name")
+    search_fields = ("name", "category")
 
-    inlines = [ProductInfoInline]
+    inlines = [ProductInfoInline, ProductParametersInline]
 
 
 @admin.register(Category)
-class ProductAdmin(admin.ModelAdmin):
+class CategoryAdmin(admin.ModelAdmin):
     model = Category
     list_display = ("name", "external_id")
     readonly_fields = ("name", "external_id")
@@ -99,8 +114,11 @@ class OrderItemInline(admin.StackedInline):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ("user", "status", "date")
-    list_filter = ("status",)
-    search_fields = ("user",)
+    list_filter = (
+        "user",
+        "status",
+    )
+    search_fields = ("user", "status")
 
     fieldsets = (
         (None, {"fields": ("user", "status", "date")}),
@@ -112,12 +130,11 @@ class OrderAdmin(admin.ModelAdmin):
         ),
     )
 
-    readonly_fields = ("total", "date", "user")  # Поле total должно быть только для чтения
+    readonly_fields = ("total", "date", "user")
 
     inlines = [OrderItemInline]
 
     def total(self, obj):
-        # Вычисляем общую сумму заказа
         total_amount = sum(
             item.product_info.price_rrc * item.quantity for item in obj.order_items.all()
         )
