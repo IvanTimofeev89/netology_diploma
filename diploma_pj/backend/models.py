@@ -37,7 +37,7 @@ SHOP_STATES = (
 )
 
 
-class UserManager(BaseUserManager['User']):
+class UserManager(BaseUserManager["User"]):
     """
     Custom manager for the User model, providing methods to create regular users and superusers.
     """
