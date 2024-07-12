@@ -60,32 +60,25 @@ def send_password_reset_token(sender: Any, instance: Any, reset_password_token: 
     )
 
 
-@receiver(order_status_changed)
-def send_order_status_changed(user_id: int, **kwargs: Any):
-    # """
-    # Signal receiver to notify the user when the status of their order changes.
-    #
-    # Args:
-    #     user_id (int): The ID of the user.
-    #     **kwargs (Any): Additional keyword arguments, including order details.
-    # """
-    # user = User.objects.get(id=user_id)
-    # message = (
-    #     f"Status of your order with number {kwargs['data'].get('id')} has "
-    #     f"been changed to '{kwargs['data'].get('status').capitalize()}'"
-    # )
-    #
-    # # Send an email with the order status change notification
-    # send_mail(
-    #     # Title:
-    #     "Your order status has been changed",
-    #     # Message:
-    #     message,
-    #     settings.DEFAULT_FROM_EMAIL,
-    #     [user.email],
-    #     fail_silently=False,
-    # )
-    pass
+@receiver(post_save, sender=Order)
+def send_order_status_changed(sender, instance, created, **kwargs):
+    if instance.status != "basket" and not created:
+        user = instance.user
+        message = (
+            f"Status of your order with number {instance.id} has "
+            f"been changed to '{instance.status.capitalize()}'"
+        )
+
+        # Send an email with the order status change notification
+        send_mail(
+            # Title:
+            "Your order status has been changed",
+            # Message:
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
 
 
 @receiver(post_save, sender=Order)
