@@ -145,7 +145,7 @@ class ProductValidators:
     def __init__(
         self,
         request_method: str,
-        json_data: Optional[Union[Dict[str, str], List[Dict[str, str]]]] = None,
+        json_data: Optional[List[Dict[str, int]]] = None,
         basket: Optional[Order] = None,
         index_list: Optional[List[int]] = None,
     ):
@@ -154,10 +154,9 @@ class ProductValidators:
 
         Args:
             request_method (str): The HTTP request method (POST, PATCH, DELETE).
-            json_data (Optional[Union[Dict[str, str], List[Dict[str, str]]]]):
-            The JSON data to validate. Defaults to None.
+            json_data (Optional[List[Dict[str, int]]]): valid JSON data. Defaults to None.
             basket (Order, optional): The user's basket. Defaults to None.
-            index_list (list[int], optional): The list of indices for deletion. Defaults to None.
+            index_list (Optional[List[int]]): The list of indices for deletion. Defaults to None.
         """
         self.json_data = json_data
         self.request_method = request_method

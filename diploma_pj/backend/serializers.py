@@ -80,7 +80,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ("id", "date", "status", "user")
+        fields = ("id", "date", "status")
         read_only_fields = ("id",)
 
 
