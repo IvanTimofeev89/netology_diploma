@@ -2,11 +2,12 @@ from typing import Any
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import Signal, receiver
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from .models import ConfirmEmailToken, User
+from .models import ConfirmEmailToken, Order, User
 
 # Define a custom signal for order status changes
 order_status_changed = Signal()
@@ -61,26 +62,38 @@ def send_password_reset_token(sender: Any, instance: Any, reset_password_token: 
 
 @receiver(order_status_changed)
 def send_order_status_changed(user_id: int, **kwargs: Any):
-    """
-    Signal receiver to notify the user when the status of their order changes.
+    # """
+    # Signal receiver to notify the user when the status of their order changes.
+    #
+    # Args:
+    #     user_id (int): The ID of the user.
+    #     **kwargs (Any): Additional keyword arguments, including order details.
+    # """
+    # user = User.objects.get(id=user_id)
+    # message = (
+    #     f"Status of your order with number {kwargs['data'].get('id')} has "
+    #     f"been changed to '{kwargs['data'].get('status').capitalize()}'"
+    # )
+    #
+    # # Send an email with the order status change notification
+    # send_mail(
+    #     # Title:
+    #     "Your order status has been changed",
+    #     # Message:
+    #     message,
+    #     settings.DEFAULT_FROM_EMAIL,
+    #     [user.email],
+    #     fail_silently=False,
+    # )
+    pass
 
-    Args:
-        user_id (int): The ID of the user.
-        **kwargs (Any): Additional keyword arguments, including order details.
-    """
-    user = User.objects.get(id=user_id)
-    message = (
-        f"Status of your order with number {kwargs['data'].get('id')} has "
-        f"been changed to '{kwargs['data'].get('status').capitalize()}'"
-    )
 
-    # Send an email with the order status change notification
-    send_mail(
-        # Title:
-        "Your order status has been changed",
-        # Message:
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+@receiver(post_save, sender=Order)
+def update_product_quantity(sender, instance, created, **kwargs):
+    if instance.status == "confirmed" and not created:
+        with transaction.atomic():
+            order_items = instance.order_items.all()
+            for item in order_items:
+                product_info = item.product_info
+                product_info.quantity -= item.quantity
+                product_info.save()

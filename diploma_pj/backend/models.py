@@ -264,11 +264,10 @@ class Order(models.Model):
         return f"Order №{self.id} - {self.user.email} - {self.date}"
 
     def save(self, *args, **kwargs):
-        from .signals import order_status_changed
-
         if self.status != "basket":
-            data = {"id": self.id, "status": self.status}
+            from .signals import order_status_changed
 
+            data = {"id": self.id, "status": self.status}
             order_status_changed.send(sender=self.__class__, user_id=self.user_id, data=data)
         super().save(*args, **kwargs)
 
