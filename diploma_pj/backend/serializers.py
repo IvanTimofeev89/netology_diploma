@@ -102,7 +102,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id", "name", "category", "product_info")
+        fields = ("name", "category", "product_info")
 
     def get_product_info(self, obj):
         product_info = ProductInfo.objects.filter(product=obj)
@@ -128,7 +128,7 @@ class GetBasketSerializer(serializers.ModelSerializer):
         for item in self._order_items:
             serialized_items.append(
                 {
-                    "product_info_id": item.product_info.id,
+                    "product_basket_id": item.id,
                     "name": item.product.name,
                     "price": item.product_info.price_rrc,
                     "quantity": item.quantity,

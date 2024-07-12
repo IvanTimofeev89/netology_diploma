@@ -363,6 +363,7 @@ class PartnerUpdate(APIView):
 class PartnerState(APIView):
     """
     Class for partner state updating and reading.
+    Thees methods are allowed for authorized users with status 'shop'
     """
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
@@ -402,8 +403,10 @@ class ManageOrder(APIView):
         Handle GET request to retrieve user's orders.
         """
         orders: QuerySet[Order] = Order.objects.filter(user=request.user)
-        serializer: OrderSerializer = OrderSerializer(orders, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if orders:
+            serializer: OrderSerializer = OrderSerializer(orders, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"message": "You don't have any orders"}, status=status.HTTP_204_NO_CONTENT)
 
     def post(self, request: Request) -> Response:
         """
@@ -450,13 +453,20 @@ class ProductsList(APIView):
             products: QuerySet[Product] = Product.objects.filter(
                 category=category, product_infos__shop=shop
             ).distinct()
-            if products:
-                serializer: ProductSerializer = ProductSerializer(products, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            products: QuerySet[Product] = Product.objects.filter(product_infos__shop__state="on")
+
+        if not products.exists():
             return Response({"message": "no products found"}, status=status.HTTP_204_NO_CONTENT)
-        products: QuerySet[Product] = Product.objects.all()
-        serializer: ProductSerializer = ProductSerializer(products, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        result_page = paginator.paginate_queryset(products, request)
+        if not result_page:
+            return Response({"message": "no products found"}, status=status.HTTP_204_NO_CONTENT)
+
+        serializer: ProductSerializer = ProductSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class ManageBasket(APIView):
