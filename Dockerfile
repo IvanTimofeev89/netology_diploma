@@ -17,13 +17,14 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 COPY . .
+RUN sed -i 's/\r//' run.sh
 
-COPY ./run.sh /
 COPY ./requirements.txt /
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
 
+COPY ./run.sh /
 RUN chmod +x /run.sh
 
 ENTRYPOINT ["bash", "run.sh"]
