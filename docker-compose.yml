@@ -1,10 +1,38 @@
-services:
+volumes:
+  pgdata:
 
-  db:
+networks:
+  netology:
+
+
+services:
+  postgres_db:
+    container_name: postgres_container
     image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - netology
     ports:
-      - "5431:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      - "5432:5432"
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U netology -d netology" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  netology_diploma:
+    container_name: netology_diploma
+    build: .
+    networks:
+      - netology
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    depends_on:
+      - postgres_db
