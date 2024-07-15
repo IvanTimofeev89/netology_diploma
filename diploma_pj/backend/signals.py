@@ -24,7 +24,7 @@ def send_email_confirmation_token(sender: Any, instance: User, created: bool, **
         created (bool): Boolean indicating whether a new record was created.
         **kwargs (Any): Additional keyword arguments.
     """
-    if created and not instance.is_email_confirmed:
+    if created and not instance.is_email_confirmed and not instance.is_staff:
         # Create a confirmation token for the new user
         token, _ = ConfirmEmailToken.objects.get_or_create(user_id=instance.pk)
 
@@ -77,6 +77,22 @@ def send_order_status_changed(sender, instance, created, **kwargs):
             message,
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
+            fail_silently=False,
+        )
+    # Notification of admin about new placed order
+    if instance.status == "placed" and not created:
+        admin = User.objects.filter(is_staff=True).first()
+        message = (
+            f"User {instance.user.email} has been placed " f"a new order with number {instance.id}"
+        )
+
+        send_mail(
+            # Title:
+            "New order has been placed",
+            # Message:
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [admin.email],
             fail_silently=False,
         )
 
