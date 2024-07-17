@@ -1,9 +1,9 @@
+
 volumes:
   pgdata:
 
 networks:
   netology:
-
 
 services:
   postgres_db:
@@ -19,11 +19,20 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U netology -d netology" ]
+      test: ["CMD-SHELL", "pg_isready -U netology -d netology"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - netology
+    ports:
+      - "6379:6379"
 
   netology_diploma:
     container_name: netology_diploma
@@ -36,3 +45,17 @@ services:
       - .env
     depends_on:
       - postgres_db
+      - redis
+
+  celery_worker:
+    container_name: celery_worker
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    networks:
+      - netology
+    depends_on:
+      - redis
+      - postgres_db
+    env_file:
+      - .env

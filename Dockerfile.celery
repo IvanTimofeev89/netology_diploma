@@ -29,4 +29,4 @@ COPY ./run.sh /
 RUN chmod +x /run.sh
 COPY ./run_celery.sh /
 RUN chmod +x /run_celery.sh
-ENTRYPOINT ["bash", "run.sh"]
+ENTRYPOINT ["bash", "run_celery.sh"]

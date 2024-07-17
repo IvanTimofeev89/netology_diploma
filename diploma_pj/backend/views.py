@@ -1,13 +1,10 @@
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
-import requests
-import yaml
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from requests.models import Response as RequestsResponse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -25,10 +22,8 @@ from .models import (
     Contact,
     Order,
     OrderItem,
-    Parameter,
     Product,
     ProductInfo,
-    ProductParameter,
     Shop,
     User,
 )
@@ -43,6 +38,7 @@ from .serializers import (
     ShopSerializer,
     UserSerializer,
 )
+from .tasks import update_goods_list
 from .validators import (
     ProductValidators,
     already_ordered_products_validator,
@@ -279,12 +275,9 @@ class PartnerUpdate(APIView):
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
 
-    def post(self, request: Request) -> Response:
-        """
-        Handle POST request to update partner's information.
-        """
-        user: User = request.user
-        url: Optional[str] = request.data.get("url")
+    def post(self, request):
+        user = request.user
+        url = request.data.get("url")
 
         if not url:
             return Response(
@@ -292,72 +285,14 @@ class PartnerUpdate(APIView):
             )
 
         try:
-            url_validator: URLValidator = URLValidator()
+            url_validator = URLValidator()
             url_validator(url)
         except DjangoValidationError as error:
             return Response({"error": str(error.message)}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            response: RequestsResponse = requests.get(url)
-            response.raise_for_status()
-            yml_file: bytes = response.content
-            yaml_data: Any = yaml.safe_load(yml_file)
-        except requests.RequestException as error:
-            return Response(
-                {"error": f"Failed to fetch YAML data: {error}"}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except yaml.YAMLError as error:
-            return Response({"error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+        update_goods_list.delay(user.id, url)
 
-        try:
-            shop_name: Optional[str] = yaml_data.get("shop")
-            shop_url: Optional[str] = yaml_data.get("url")
-
-            with transaction.atomic():
-                shop, created = Shop.objects.get_or_create(name=shop_name, url=shop_url, user=user)
-
-                ProductInfo.objects.filter(shop=shop).delete()
-
-                for category_data in yaml_data.get("categories", []):
-                    category, _ = Category.objects.get_or_create(
-                        external_id=category_data.get("id"),
-                        defaults={"name": category_data.get("name")},
-                    )
-                    category.shops.add(shop)
-
-                    goods_list: List[Dict[str, Any]] = yaml_data.get("goods", [])
-                    filtered_goods: List[Dict[str, Any]] = [
-                        item for item in goods_list if item.get("category") == category.external_id
-                    ]
-
-                    for item in filtered_goods:
-                        product, _ = Product.objects.get_or_create(
-                            name=item.get("name"), category=category
-                        )
-                        prod_info_obj: ProductInfo = ProductInfo.objects.create(
-                            product=product,
-                            shop=shop,
-                            quantity=item.get("quantity"),
-                            price=item.get("price"),
-                            price_rrc=item.get("price_rrc"),
-                            external_id=item.get("id"),
-                        )
-
-                        for key, value in item.get("parameters", {}).items():
-                            param_obj, _ = Parameter.objects.get_or_create(name=key)
-                            ProductParameter.objects.create(
-                                product_info=prod_info_obj,
-                                parameter=param_obj,
-                                value=value,
-                                product=product,
-                            )
-        except Exception as error:
-            return Response(
-                {"error": f"Failed to update goods list: {error}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response({"message": "Goods list updated successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Goods list update started"}, status=status.HTTP_200_OK)
 
 
 class PartnerState(APIView):
