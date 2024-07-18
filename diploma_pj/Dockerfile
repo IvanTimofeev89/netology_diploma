@@ -49,12 +49,13 @@ COPY --from=builder /app/requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 
+RUN sed -i 's/\r$//g'  $APP_HOME/run.sh
+RUN sed -i 's/\r$//g'  $APP_HOME/run_celery.sh
+
 # copy .sh files
 COPY ./run.sh .
 COPY ./run_celery.sh .
 
-RUN sed -i 's/\r$//g'  $APP_HOME/run.sh
-RUN sed -i 's/\r$//g'  $APP_HOME/run_celery.sh
 RUN chmod +x  $APP_HOME/run.sh
 RUN chmod +x  $APP_HOME/run_celery.sh
 
