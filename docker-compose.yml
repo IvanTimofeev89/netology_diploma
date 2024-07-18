@@ -1,11 +1,19 @@
-
-volumes:
-  pgdata:
-
-networks:
-  netology:
-
 services:
+  netology_diploma:
+    container_name: netology_diploma
+    build: ./diploma_pj
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    networks:
+      - netology
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres_db
+      - redis
+
   postgres_db:
     container_name: postgres_container
     image: postgres:latest
@@ -34,23 +42,10 @@ services:
     ports:
       - "6379:6379"
 
-  netology_diploma:
-    container_name: netology_diploma
-    build: .
-    networks:
-      - netology
-    ports:
-      - 8000:8000
-    env_file:
-      - .env
-    depends_on:
-      - postgres_db
-      - redis
-
   celery_worker:
     container_name: celery_worker
     build:
-      context: .
+      context: ./diploma_pj
       dockerfile: Dockerfile.celery
     networks:
       - netology
@@ -59,3 +54,23 @@ services:
       - postgres_db
     env_file:
       - .env
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.nginx
+    volumes:
+      - static_volume:/home/app/web/staticfiles
+    ports:
+      - 1337:80
+    depends_on:
+      - netology_diploma
+    networks:
+      - netology
+
+volumes:
+  pgdata:
+  static_volume:
+
+networks:
+  netology:

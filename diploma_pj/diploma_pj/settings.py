@@ -28,9 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-ubm_674#sqzbyyq+41r36@pguswe@6x-c_0(vj^6032500u11i"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False")
+DEBUG = bool(int(os.getenv("DEBUG", "0")))
 
-ALLOWED_HOSTS: list[None | str] = []
+ALLOWED_HOSTS: list[None | str] = os.getenv("DJANGO_ALLOWED_HOSTS").split(" ")
 
 
 # Application definition
@@ -128,8 +128,8 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -173,3 +173,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+
+
+CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:1337", "http://localhost:1337"]
