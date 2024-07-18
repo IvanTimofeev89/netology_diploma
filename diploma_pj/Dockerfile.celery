@@ -47,6 +47,9 @@ COPY --from=builder /app/requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 
+# copy project
+COPY . $APP_HOME
+
 # copy .sh files
 COPY ./run.sh .
 RUN sed -i 's/\r$//g'  $APP_HOME/run.sh
@@ -55,9 +58,6 @@ RUN chmod +x  $APP_HOME/run.sh
 COPY ./run_celery.sh .
 RUN sed -i 's/\r$//g'  $APP_HOME/run_celery.sh
 RUN chmod +x  $APP_HOME/run_celery.sh
-
-# copy project
-COPY . $APP_HOME
 
 # chown all the files to the app user
 RUN chown -R app:app $APP_HOME
