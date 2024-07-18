@@ -16,11 +16,9 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc
 
-
 # install python dependencies
 COPY ./requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
-
 
 #########
 # FINAL #
@@ -49,18 +47,17 @@ COPY --from=builder /app/requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 
-# copy project
-COPY . $APP_HOME
-
-RUN sed -i 's/\r$//g'  $APP_HOME/run.sh
-RUN sed -i 's/\r$//g'  $APP_HOME/run_celery.sh
-
 # copy .sh files
 COPY ./run.sh .
-COPY ./run_celery.sh .
-
+RUN sed -i 's/\r$//g'  $APP_HOME/run.sh
 RUN chmod +x  $APP_HOME/run.sh
+
+COPY ./run_celery.sh .
+RUN sed -i 's/\r$//g'  $APP_HOME/run_celery.sh
 RUN chmod +x  $APP_HOME/run_celery.sh
+
+# copy project
+COPY . $APP_HOME
 
 # chown all the files to the app user
 RUN chown -R app:app $APP_HOME
