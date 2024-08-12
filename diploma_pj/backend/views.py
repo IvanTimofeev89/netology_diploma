@@ -14,6 +14,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from .models import (
@@ -86,6 +87,7 @@ class Login(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission]
+    throttle_classes = [UserRateThrottle]
 
     def post(self, request: Request) -> Response:
         """
@@ -138,6 +140,7 @@ class ManageContact(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission]
+    throttle_classes = [UserRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -248,6 +251,7 @@ class ManageUserAccount(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission]
+    throttle_classes = [UserRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -274,6 +278,7 @@ class PartnerUpdate(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
+    throttle_classes = [UserRateThrottle]
 
     def post(self, request):
         user = request.user
@@ -302,6 +307,7 @@ class PartnerState(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
+    throttle_classes = [UserRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -332,6 +338,7 @@ class ManageOrder(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission]
+    throttle_classes = [UserRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -370,6 +377,7 @@ class ProductsList(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -410,6 +418,7 @@ class ManageBasket(APIView):
     """
 
     permission_classes = [EmailOrTokenPermission]
+    throttle_classes = [UserRateThrottle]
 
     def get(self, request: Request) -> Response:
         """
@@ -575,6 +584,7 @@ class ShopList(ListAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["name", "state"]
@@ -591,6 +601,7 @@ class CategoryList(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["id", "external_id", "name"]
