@@ -28,7 +28,7 @@ urlpatterns = [
     path("partner/state/", PartnerState.as_view(), name="partner_state"),
     path("shops/", ShopList.as_view(), name="shop_list"),
     path("categories/", CategoryList.as_view(), name="shop_list"),
-    path("order/", ManageOrder.as_view(), name="order_handling"),
+    path("orders/", ManageOrder.as_view(), name="order_handling"),
     path("products/", ProductsList.as_view(), name="products_list"),
     path("basket/", ManageBasket.as_view(), name="basket_handling"),
 ]

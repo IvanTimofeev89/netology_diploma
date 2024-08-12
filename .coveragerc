@@ -1,0 +1,2 @@
+[run]
+omit=tests/*,.venv/*,manage.py,diploma_pj/*,*tests.py,
