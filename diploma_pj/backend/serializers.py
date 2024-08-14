@@ -1,5 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema_field, inline_serializer
 from rest_framework import serializers
 
 from .models import (
@@ -53,7 +54,9 @@ class ContactSerializer(serializers.ModelSerializer):
             "user",
         )
         read_only_fields = ("id",)
-        extra_kwargs = {"user": {"write_only": True}}
+        extra_kwargs = {
+            "user": {"write_only": True},
+        }
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -91,6 +94,12 @@ class ProductInfoSerializer(serializers.ModelSerializer):
         model = ProductInfo
         fields = ("id", "quantity", "price_rrc", "shop")
 
+    @extend_schema_field(
+        inline_serializer(
+            name="ShopSerializer",
+            fields={"shop_id": serializers.IntegerField(), "shop_name": serializers.CharField()},
+        )
+    )
     def get_shop(self, obj):
         shop = Shop.objects.get(id=obj.shop_id)
         return {"shop_id": shop.id, "shop_name": shop.name}
@@ -104,9 +113,17 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ("name", "category", "product_info")
 
+    @extend_schema_field(ProductInfoSerializer(many=True))
     def get_product_info(self, obj):
         product_info = ProductInfo.objects.filter(product=obj)
         return ProductInfoSerializer(product_info, many=True).data
+
+
+class OrderItemSerializer(serializers.Serializer):
+    product_basket_id = serializers.IntegerField()
+    name = serializers.CharField()
+    price = serializers.IntegerField()
+    quantity = serializers.IntegerField()
 
 
 class GetBasketSerializer(serializers.ModelSerializer):
@@ -118,6 +135,7 @@ class GetBasketSerializer(serializers.ModelSerializer):
         fields = ("id", "date", "status", "total", "info")
         read_only_fields = ("id",)
 
+    @extend_schema_field(OrderItemSerializer(many=True))
     def get_info(self, obj):
         if not hasattr(self, "_order_items"):
             self._order_items = OrderItem.objects.filter(order=obj).select_related(
@@ -136,9 +154,22 @@ class GetBasketSerializer(serializers.ModelSerializer):
             )
         return serialized_items
 
+    @extend_schema_field(serializers.IntegerField())
     def get_total(self, obj):
         if not hasattr(self, "_order_items"):
             self._order_items = OrderItem.objects.filter(order=obj).select_related("product_info")
 
         total = sum(item.quantity * item.product_info.price_rrc for item in self._order_items)
         return total
+
+
+class ErrorResponseSerializer(serializers.Serializer):
+    error = serializers.CharField(max_length=255)
+
+
+class SuccessResponseSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=255)
+
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)

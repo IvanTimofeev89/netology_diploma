@@ -5,7 +5,16 @@ from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers, status
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -32,11 +41,14 @@ from .permissions import EmailOrTokenPermission, OnlyShopPermission
 from .serializers import (
     CategorySerializer,
     ContactSerializer,
+    ErrorResponseSerializer,
     GetBasketSerializer,
     OrderSerializer,
     ProductSerializer,
     RegisterUserSerializer,
     ShopSerializer,
+    SuccessResponseSerializer,
+    TokenSerializer,
     UserSerializer,
 )
 from .tasks import update_goods_list
@@ -59,6 +71,31 @@ class RegisterUser(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["User"],
+        request=RegisterUserSerializer,
+        responses={
+            status.HTTP_201_CREATED: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+        },
+        examples=[
+            OpenApiExample(
+                "Example request",
+                value={
+                    "email": "test@mail.ru",
+                    "password": "goodpassword",
+                    "first_name": "test",
+                    "last_name": "test",
+                    "middle_name": "test",
+                    "company": "test",
+                    "position": "test",
+                },
+                request_only=True,
+                response_only=False,
+            )
+        ],
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to register a new user.
@@ -89,6 +126,30 @@ class Login(APIView):
     permission_classes = [EmailOrTokenPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        tags=["User"],
+        responses={
+            status.HTTP_201_CREATED: TokenSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        parameters=[
+            OpenApiParameter(
+                name="email",
+                location=OpenApiParameter.HEADER,
+                description="User's email",
+                required=True,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="password",
+                location=OpenApiParameter.HEADER,
+                description="User's password",
+                required=True,
+                type=str,
+            ),
+        ],
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to log in a user and provide a token.
@@ -110,6 +171,17 @@ class EmailConfirm(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["User"],
+        request=inline_serializer(
+            "body", fields={"token": serializers.CharField(), "email": serializers.EmailField()}
+        ),
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+        },
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to confirm user's email with a token.
@@ -134,6 +206,32 @@ class EmailConfirm(APIView):
         )
 
 
+@extend_schema(
+    tags=["User"],
+    parameters=[
+        OpenApiParameter(
+            name="token",
+            location=OpenApiParameter.HEADER,
+            description="User's token",
+            required=True,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="email",
+            location=OpenApiParameter.HEADER,
+            description="User's email",
+            required=False,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="password",
+            location=OpenApiParameter.HEADER,
+            description="User's password",
+            required=False,
+            type=str,
+        ),
+    ],
+)
 class ManageContact(APIView):
     """
     Class for contact reading, creation, updating and deletion.
@@ -142,6 +240,14 @@ class ManageContact(APIView):
     permission_classes = [EmailOrTokenPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: ContactSerializer,
+            status.HTTP_404_NOT_FOUND: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["GET"],
+    )
     def get(self, request: Request) -> Response:
         """
         Handle GET request to retrieve user's contacts.
@@ -154,6 +260,15 @@ class ManageContact(APIView):
         serializer: ContactSerializer = ContactSerializer(user_contact, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        request=ContactSerializer,
+        responses={
+            status.HTTP_201_CREATED: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to create a new contact for the user.
@@ -169,6 +284,15 @@ class ManageContact(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=ContactSerializer,
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["PATCH"],
+    )
     def patch(self, request: Request) -> Response:
         """
         Handle PATCH request to update an existing contact.
@@ -204,6 +328,24 @@ class ManageContact(APIView):
             {"error": "You must provide contact ID"}, status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(
+        request=OpenApiRequest(
+            inline_serializer(
+                name="DeleteContactSerializer",
+                fields={
+                    "items": serializers.ListField(
+                        child=serializers.IntegerField(), allow_empty=False
+                    )
+                },
+            )
+        ),
+        responses={
+            status.HTTP_204_NO_CONTENT: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["DELETE"],
+    )
     def delete(self, request: Request) -> Response:
         """
         Handle DELETE request to delete user's contacts.
@@ -245,6 +387,32 @@ class ManageContact(APIView):
         )
 
 
+@extend_schema(
+    tags=["User"],
+    parameters=[
+        OpenApiParameter(
+            name="token",
+            location=OpenApiParameter.HEADER,
+            description="User's token",
+            required=True,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="email",
+            location=OpenApiParameter.HEADER,
+            description="User's email",
+            required=False,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="password",
+            location=OpenApiParameter.HEADER,
+            description="User's password",
+            required=False,
+            type=str,
+        ),
+    ],
+)
 class ManageUserAccount(APIView):
     """
     Class for user account reading, updating and deletion.
@@ -253,6 +421,13 @@ class ManageUserAccount(APIView):
     permission_classes = [EmailOrTokenPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["GET"],
+    )
     def get(self, request: Request) -> Response:
         """
         Handle GET request to retrieve user's account details.
@@ -260,6 +435,15 @@ class ManageUserAccount(APIView):
         serializer: UserSerializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        request=UserSerializer,
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+        },
+        methods=["PATCH"],
+    )
     def patch(self, request: Request) -> Response:
         """
         Handle PATCH request to update user's account details.
@@ -269,9 +453,35 @@ class ManageUserAccount(APIView):
             serializer.save()
             return Response({"message": "User updated successfully"}, status=status.HTTP_200_OK)
         else:
-            return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    tags=["Partners"],
+    parameters=[
+        OpenApiParameter(
+            name="token",
+            location=OpenApiParameter.HEADER,
+            description="User's token",
+            required=True,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="email",
+            location=OpenApiParameter.HEADER,
+            description="User's email",
+            required=False,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="password",
+            location=OpenApiParameter.HEADER,
+            description="User's password",
+            required=False,
+            type=str,
+        ),
+    ],
+)
 class PartnerUpdate(APIView):
     """
     Class for partner updating.
@@ -280,6 +490,16 @@ class PartnerUpdate(APIView):
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        request=inline_serializer("url", fields={"url": serializers.URLField()}),
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            status.HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+        },
+        methods=["POST"],
+    )
     def post(self, request):
         user = request.user
         url = request.data.get("url")
@@ -300,6 +520,32 @@ class PartnerUpdate(APIView):
         return Response({"message": "Goods list update started"}, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["Partners"],
+    parameters=[
+        OpenApiParameter(
+            name="token",
+            location=OpenApiParameter.HEADER,
+            description="User's token",
+            required=True,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="email",
+            location=OpenApiParameter.HEADER,
+            description="User's email",
+            required=False,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="password",
+            location=OpenApiParameter.HEADER,
+            description="User's password",
+            required=False,
+            type=str,
+        ),
+    ],
+)
 class PartnerState(APIView):
     """
     Class for partner state updating and reading.
@@ -309,6 +555,14 @@ class PartnerState(APIView):
     permission_classes = [EmailOrTokenPermission, OnlyShopPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            status.HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+        },
+        methods=["GET"],
+    )
     def get(self, request: Request) -> Response:
         """
         Handle GET request to retrieve partner's state.
@@ -318,6 +572,16 @@ class PartnerState(APIView):
             {"message": f"Shop state is {user.user_shop.state.upper()}"}, status=status.HTTP_200_OK
         )
 
+    @extend_schema(
+        request=ShopSerializer,
+        responses={
+            status.HTTP_200_OK: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            status.HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+        },
+        methods=["PATCH"],
+    )
     def patch(self, request: Request) -> Response:
         """
         Handle PATCH request to update partner's state.
@@ -332,6 +596,32 @@ class PartnerState(APIView):
             return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    tags=["Shop"],
+    parameters=[
+        OpenApiParameter(
+            name="token",
+            location=OpenApiParameter.HEADER,
+            description="User's token",
+            required=True,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="email",
+            location=OpenApiParameter.HEADER,
+            description="User's email",
+            required=False,
+            type=str,
+        ),
+        OpenApiParameter(
+            name="password",
+            location=OpenApiParameter.HEADER,
+            description="User's password",
+            required=False,
+            type=str,
+        ),
+    ],
+)
 class ManageOrder(APIView):
     """
     Class to create and get orders.
@@ -340,6 +630,13 @@ class ManageOrder(APIView):
     permission_classes = [EmailOrTokenPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        responses={
+            status.HTTP_200_OK: OrderSerializer,
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["GET"],
+    )
     def get(self, request: Request) -> Response:
         """
         Handle GET request to retrieve user's orders.
@@ -350,6 +647,17 @@ class ManageOrder(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"message": "You don't have any orders"}, status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        responses={
+            status.HTTP_201_CREATED: inline_serializer(
+                "body",
+                fields={"message": serializers.CharField(), "order_id": serializers.IntegerField()},
+            ),
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+            status.HTTP_403_FORBIDDEN: ErrorResponseSerializer,
+        },
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to create a new order from user's basket.
@@ -371,6 +679,32 @@ class ManageOrder(APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Shop"],
+        responses={
+            status.HTTP_200_OK: ProductSerializer(many=True),
+            status.HTTP_204_NO_CONTENT: SuccessResponseSerializer,
+            status.HTTP_400_BAD_REQUEST: ErrorResponseSerializer,
+        },
+        parameters=[
+            OpenApiParameter(
+                name="shop_id",
+                location=OpenApiParameter.QUERY,
+                description="Shop Id",
+                required=False,
+                type=int,
+            ),
+            OpenApiParameter(
+                name="category_di",
+                location=OpenApiParameter.QUERY,
+                description="Category Id",
+                required=False,
+                type=int,
+            ),
+        ],
+    )
+)
 class ProductsList(APIView):
     """
     Class to list products based on shop and category.
@@ -420,6 +754,27 @@ class ManageBasket(APIView):
     permission_classes = [EmailOrTokenPermission]
     throttle_classes = [UserRateThrottle]
 
+    @extend_schema(
+        tags=["Shop"],
+        request=GetBasketSerializer,
+        responses={
+            200: GetBasketSerializer(many=True),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Basket does not exist",
+                examples=[
+                    OpenApiExample(
+                        "Basket not found",
+                        value={"error": "You don't have an active basket"},
+                        description="This error occurs when the "
+                        "user does not have an active basket.",
+                    )
+                ],
+            ),
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["GET"],
+    )
     def get(self, request: Request) -> Response:
         """
         Handle GET request to retrieve items in user's basket.
@@ -433,6 +788,50 @@ class ManageBasket(APIView):
         serializer = GetBasketSerializer(basket, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        tags=["Shop"],
+        responses={
+            201: OpenApiResponse(
+                response=SuccessResponseSerializer,
+                description="Adding a product to basket",
+                examples=[
+                    OpenApiExample(
+                        "Product added",
+                        value={"message": "Product has been successfully added to basket"},
+                        description="This example shows how to add a product to basket.",
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Validation errors during adding product to basket",
+                examples=[
+                    OpenApiExample(
+                        "Basket not found",
+                        value={"error": "You don't " "have an active basket"},
+                        description="This error occurs when the "
+                        "user does not have an active basket.",
+                    ),
+                    OpenApiExample(
+                        "Incorrect data",
+                        value={"error": "Incorrect request format"},
+                        description="This error occurs when the "
+                        "user passed incorrect format of the data.",
+                    ),
+                    OpenApiExample(
+                        "Product_info or quantity are missing",
+                        value={
+                            "error": "Following parameters are required: product_info, quantity"
+                        },
+                        description="This error occurs when the "
+                        "user didn't pass product_info or quantity values.",
+                    ),
+                ],
+            ),
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["POST"],
+    )
     def post(self, request: Request) -> Response:
         """
         Handle POST request to add items to user's basket.
@@ -483,10 +882,52 @@ class ManageBasket(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(
-            {"message": "Following parameters are required: product_info, quantity"},
+            {"error": "Following parameters are required: product_info, quantity"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(
+        tags=["Shop"],
+        responses={
+            200: OpenApiResponse(
+                response=SuccessResponseSerializer,
+                description="Basket updating",
+                examples=[
+                    OpenApiExample(
+                        "Basket updated",
+                        value={"message": "Basket has been successfully updated"},
+                        description="This example shows how to update basket.",
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Validation errors during basket updating",
+                examples=[
+                    OpenApiExample(
+                        "Basket not found",
+                        value={"error": "You don't have an active basket"},
+                        description="This error occurs when the "
+                        "user does not have an active basket.",
+                    ),
+                    OpenApiExample(
+                        "Incorrect data",
+                        value={"error": "Incorrect request format"},
+                        description="This error occurs when the "
+                        "user passed incorrect format of the data.",
+                    ),
+                    OpenApiExample(
+                        "Id or quantity are missing",
+                        value={"error": "Following parameters are required: id, quantity"},
+                        description="This error occurs when the "
+                        "user didn't pass id or quantity values.",
+                    ),
+                ],
+            ),
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["PATCH"],
+    )
     def patch(self, request: Request) -> Response:
         """
         Handle PATCH request to update items in user's basket.
@@ -529,6 +970,48 @@ class ManageBasket(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    @extend_schema(
+        tags=["Shop"],
+        responses={
+            204: OpenApiResponse(
+                response=SuccessResponseSerializer,
+                description="Product removing",
+                examples=[
+                    OpenApiExample(
+                        "Product removed from basket",
+                        value={"message": "Product has been successfully deleted from basket"},
+                        description="This example shows how to remove product from basket.",
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                response=ErrorResponseSerializer,
+                description="Validation errors during products removing from basket",
+                examples=[
+                    OpenApiExample(
+                        "Basket not found",
+                        value={"error": "You don't have an active basket"},
+                        description="This error occurs when the "
+                        "user does not have an active basket.",
+                    ),
+                    OpenApiExample(
+                        "Incorrect data",
+                        value={"error": "Incorrect request format"},
+                        description="This error occurs when the "
+                        "user passed incorrect format of the data.",
+                    ),
+                    OpenApiExample(
+                        "Product doesn't exist",
+                        value={"error": "Product with {id} does not exist"},
+                        description="This error occurs when the user is tring to "
+                        "delete product that does not exist in the basket.",
+                    ),
+                ],
+            ),
+            status.HTTP_401_UNAUTHORIZED: ErrorResponseSerializer,
+        },
+        methods=["DELETE"],
+    )
     def delete(self, request: Request) -> Response:
         """
         Handle DELETE request to remove items from user's basket.
@@ -576,6 +1059,15 @@ class ManageBasket(APIView):
         )
 
 
+@extend_schema(
+    tags=["Shop"],
+    responses={
+        200: OpenApiResponse(
+            response=ShopSerializer,
+            description="List of shops with pagination, filtering, search, and ordering",
+        ),
+    },
+)
 class ShopList(ListAPIView):
     """
     Class to list all shops with pagination, filtering, search, and ordering.
@@ -593,6 +1085,15 @@ class ShopList(ListAPIView):
     ordering = ["name"]
 
 
+@extend_schema(
+    tags=["Shop"],
+    responses={
+        200: OpenApiResponse(
+            response=CategorySerializer,
+            description="List of categories with pagination, filtering, search, and ordering",
+        ),
+    },
+)
 class CategoryList(ListAPIView):
     """
     Class to list all categories with pagination, filtering, search, and ordering.
