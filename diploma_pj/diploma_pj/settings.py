@@ -12,10 +12,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
 
+import sentry_sdk
 from dotenv import load_dotenv
+from sentry_sdk.integrations.django import DjangoIntegration
 
 load_dotenv()
 
@@ -38,7 +38,7 @@ ALLOWED_HOSTS: list[None | str] = os.getenv("DJANGO_ALLOWED_HOSTS").split(" ")
 # Application definition
 
 INSTALLED_APPS = [
-    'jet',
+    "jet",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -189,8 +189,8 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:8000", "http://localhost:8000"]
 
 sentry_sdk.init(
-   dsn="https://3f3db582b499d833161c1e7cce3c2d72@o4507883253530624.ingest.de.sentry.io/4507883263426640",
-   integrations=[DjangoIntegration()],
-   traces_sample_rate=1.0,
-   send_default_pii=True,
+    dsn="https://3f3db582b499d833161c1e7cce3c2d72@o4507883253530624.ingest.de.sentry.io/4507883263426640",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
 )

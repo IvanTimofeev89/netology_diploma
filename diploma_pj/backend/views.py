@@ -1112,7 +1112,7 @@ class CategoryList(ListAPIView):
 
 
 class TriggerError(APIView):
-
     permission_classes = [AllowAny]
+
     def get(self, request: Request) -> Response:
         return Response(data=(1 / 0), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
