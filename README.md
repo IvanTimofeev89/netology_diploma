@@ -17,7 +17,8 @@
 
 
 ### Дополнительная информация:
-* Внедрена система мониторинга Sentry's Python SDK
+* Внедрена система мониторинга Sentry
+* Административная панель улучшена с помощью библиотеки Django JET Reboot
 * [Документация по запросам в PostMan](https://documenter.getpostman.com/view/28416434/2sA3e5dnbk)
 * В качестве альтернативы PostMan API реализована в Swagger (drf spectacular)
 * Степень покрытия тестами - 56%
